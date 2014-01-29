@@ -58,23 +58,50 @@ fun tetra a n =
 
 (* Question 2 *)
 
-fun sum xs = raise Fail "sum not implemented"
+fun sum [] = 0
+  | sum (x::xs')= x+(sum xs')
 
-fun prod xs = raise Fail "prod not implemented"
+fun prod [] = 1
+  | prod (x::xs)= x*(prod xs)
 
-fun every_other xs = raise Fail "every_other not implemented"
+fun every_other_help [] _= []
+  | every_other_help (x::xs) true= x::(every_other_help xs false)
+  | every_other_help (x::xs) false=(every_other_help xs true ) 
 
-fun flatten xss = raise Fail "flatten not implemented"
+fun every_other xs = 
+  every_other_help xs true
 
-fun heads xss = raise Fail "heads not implemented"
+fun flatten [] = []
+  | flatten (xs::xss)= xs@(flatten xss) 
 
-fun tails xss = raise Fail "tails not implemented"
+fun heads [] = []
+  | heads ([]::xss)= (heads xss)
+  | heads (xs::xss)=(hd xs)::(heads xss)
 
-fun scaleMat a m = raise Fail "scaleMat not implemented"
+fun tails [] = []
+  | tails ([]::xss)=(tails xss)
+  | tails (xs::xss)=(tl xs)::(tails xss)
 
-fun addMat m1 m2 = raise Fail "addMat not implemented"
+fun scaleMatHelp m []=[]
+  | scaleMatHelp m (x::xs)=(m*x)::(scaleMatHelp m xs)
 
+fun scaleMat m []=[]
+  | scaleMat m ([]::xss) =(scaleMat m xss)
+  | scaleMat m (xs::xss) =(scaleMatHelp m xs)::(scaleMat m xss)
 
+fun curl ix len work total []=total@[work]
+  | curl ix len work total (x::xs)= 
+      if ix<len
+      then (curl (ix+1) len (work@[x]) total xs)
+      else (curl 0 len [] (total@[work]) (x::xs))  
+
+fun addMatHelp [] []= []
+  | addMatHelp [] _ = raise Fail "my god what have you done (malformed matrices)" 
+  | addMatHelp _ [] = raise Fail "my god what have you done (malformed matrices)"
+  | addMatHelp (x::xs) (y::ys) = y+x::(addMatHelp xs ys)
+
+fun addMat m1 m2=
+  (curl 0 (length (hd m1)) [] [] (addMatHelp (flatten m1) (flatten m2)))
 
 (* QUESTIONS 3 & 4 *)
 
