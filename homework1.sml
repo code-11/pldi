@@ -1,8 +1,14 @@
 (*
  * PLDI (Spring 2014)
- *
  * Code for HOMEWORK 1
- *
+ * 
+ * For the matrix adding, I decided to do it a harder way then needed. 
+ I flatten the matrices and then add them element-wise. 
+ Then came the hard part, I needed to roll the matrices back 
+ up again. The curl function is a little too lenient as it 
+ can make misshappen matrices but maybe it will be useful later. 
+
+ As with any uncharted function, I probably missed some edge cases.
  *)
 
 
