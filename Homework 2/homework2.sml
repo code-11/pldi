@@ -99,7 +99,16 @@ fun applyTail _ = unimplemented "applyTail"
 
 
 (* Substitution function -- COMPLETE the missing cases *)
+(*e what youre going to substitue in (X*X)*)
+(*id is what youre going to substitute for (x)*)
+(*v is the value (10)*)
 
+fun getBinders []= []
+  | getBinders ((varName,expression)::rest)=
+    varName::(getBinders rest) 
+
+
+(*substitute *)
 fun subst (EVal v) id e = EVal v
   | subst (EAdd (e1,e2)) id e = EAdd (subst e1 id e, subst e2 id e)
   | subst (ESub (e1,e2)) id e = ESub (subst e1 id e, subst e2 id e)
@@ -121,13 +130,21 @@ fun subst (EVal v) id e = EVal v
   | subst (EIsEmpty e1) id e = unimplemented "subst/EIsEmpty"
   | subst (EHead e1) id e = unimplemented "subst/EHead"
   | subst (ETail e1) id e = unimplemented "subst/ETail"
-  | subst (EPair (e1,e2)) id e = unimplemented "subst/EPair"
-  | subst (EFirst e1) id e = unimplemented "subst/EFirst"
-  | subst (ESecond e1) id e = unimplemented "subst/ESecond"
-  | subst (ESlet (bnds,e1)) id e = unimplemented "subst/ESlet"
+  | subst (EPair (e1,e2)) id e = EPair (subst e1 id e,subst e2 id e)
+  | subst (EFirst e1) id e = EFirst (subst e1 id e)
+  | subst (ESecond e1) id e = ESecond (subst e1 id e)  
+  | subst (ESlet (bnds,e1)) id e=
+    
+    if (List.exists (fn x=>x=id) (getBinders bnds))
+    then ESlet((substList id e bnds), e1)
+    else ESlet((substList id e bnds), (subst e1 id e))
+
+
   | subst (ECallE (e1,e2)) id e = unimplemented "subst/ECallE"
 
-
+and substList id e []=[]
+  | substList id e ((id',e')::rest)=
+    (id',(subst e' id e))::(substList id e rest)
 
 
 (* Lookup a function name in the function environment *)
@@ -153,14 +170,14 @@ fun eval _ (EVal v) = v
   | eval fenv (EIdent id) = unimplemented "eval/EIdent"
   | eval fenv (ECall (name,e)) = 
                 evalCall fenv (lookup name fenv) (eval fenv e)
-  | eval fenv (ESlet (bnds,f)) = unimplemented "eval/ESlet"
+  | eval fenv (ESlet (bnds,e)) = (evalSLet fenv (evalBindings fenv bnds) e)
   | eval fenv (ECons (e1,e2)) = unimplemented "eval/ECons"
   | eval fenv (EIsEmpty e) = unimplemented "eval/EIsEmpty"
   | eval fenv (EHead e) = unimplemented "eval/EHead"
   | eval fenv (ETail e) = unimplemented "eval/ETail"
-  | eval fenv (EPair (e1,e2)) = unimplemented "eval/EPair"
-  | eval fenv (EFirst e) = unimplemented "eval/EFirst"
-  | eval fenv (ESecond e) = unimplemented "eval/ESecond"
+  | eval fenv (EPair (e1,e2)) = applyPair (eval fenv e1) (eval fenv e2)
+  | eval fenv (EFirst e) = applyFirst (eval fenv e) 
+  | eval fenv (ESecond e) = applySecond (eval fenv e)
   | eval fenv (ECallE (func, e)) = unimplemented "eval/ECallE"
 
 and evalCall fenv (FDef (param,body)) arg = 
@@ -171,6 +188,14 @@ and evalIf fenv (VBool true) ethen eelse = eval fenv ethen
   | evalIf _ _ _ _ = evalError "evalIf"
 
 and evalLet fenv id v body = eval fenv (subst body id (EVal v))
+
+and evalBindings fenv [] = []
+  | evalBindings fenv ((a,b)::tl)=
+    (a,(EVal (eval fenv b)))::(evalBindings fenv tl)
+
+and evalSLet fenv [] body= (eval fenv body)
+  | evalSLet fenv ((name,localbdy)::tl) body=
+    evalSLet fenv tl (subst body name localbdy)
 
 
 
