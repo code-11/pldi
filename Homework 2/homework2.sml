@@ -85,13 +85,19 @@ fun applySecond (VPair (x,y))=y
 
 (* COMPLETE THE FOLLOWING FOR QUESTION 3 *)
 
-fun applyCons _ _ = unimplemented "applyCons"
+fun applyCons head (VList tail) = 
+   (VList (head::tail))
+  | applyCons _ _=evalError "Weep for me not, for my glory shall be eternal...(Type mismatch in Cons)"
 
-fun applyIsEmpty _ = unimplemented "applyIsEmpty"
+fun applyIsEmpty (VList inputList) = 
+  (VBool (List.null inputList))
+  | applyIsEmpty _ = (VBool false)
 
-fun applyHead _ = unimplemented "applyHead"
+fun applyHead (VList (hd::tl))=hd 
+  | applyHead _ = evalError "There is nothing proper about what you are doing, soldier, but do try to kill me properly...(Type mismatch in IsEmpty)"
 
-fun applyTail _ = unimplemented "applyTail"
+fun applyTail (VList (hd::tl)) =(VList tl)
+  | applyTail _= evalError "It's better to burn out than to fade away...(Type Error in applyTail)"
 
 
 
@@ -126,10 +132,10 @@ fun subst (EVal v) id e = EVal v
                                 then e
                               else EIdent id'
   | subst (ECall (n,e1)) id e = ECall (n,subst e1 id e)
-  | subst (ECons (e1,e2)) id e = unimplemented "subst/ECons"
-  | subst (EIsEmpty e1) id e = unimplemented "subst/EIsEmpty"
-  | subst (EHead e1) id e = unimplemented "subst/EHead"
-  | subst (ETail e1) id e = unimplemented "subst/ETail"
+  | subst (ECons (e1,e2)) id e = ECons (subst e1 id e,subst e2 id e)
+  | subst (EIsEmpty e1) id e = EIsEmpty (subst e1 id e)
+  | subst (EHead e1) id e = EHead (subst e1 id e)
+  | subst (ETail e1) id e = ETail (subst e1 id e)
   | subst (EPair (e1,e2)) id e = EPair (subst e1 id e,subst e2 id e)
   | subst (EFirst e1) id e = EFirst (subst e1 id e)
   | subst (ESecond e1) id e = ESecond (subst e1 id e)  
@@ -140,7 +146,7 @@ fun subst (EVal v) id e = EVal v
     else ESlet((substList id e bnds), (subst e1 id e))
 
 
-  | subst (ECallE (e1,e2)) id e = unimplemented "subst/ECallE"
+  | subst (ECallE (e1,e2)) id e = ECallE ((subst e1 id e), (subst e2 id e))
 
 and substList id e []=[]
   | substList id e ((id',e')::rest)=
@@ -148,8 +154,7 @@ and substList id e []=[]
 
 
 (* Lookup a function name in the function environment *)
-
-fun lookup name [] = evalError ("lookup - "^name)
+fun lookup name [] = evalError ("Now I shall go to sleep. Goodnight...(lookup - "^name^")")
   | lookup name ((n,f)::fenv) = 
       if (n = name)
         then f
@@ -167,18 +172,23 @@ fun eval _ (EVal v) = v
   | eval fenv (EEq (e1,e2)) = applyEq (eval fenv e1) (eval fenv e2)
   | eval fenv (EIf (e1,e2,e3)) = evalIf fenv (eval fenv e1) e2 e3
   | eval fenv (ELet (n,e1,e2)) = evalLet fenv n (eval fenv e1) e2
-  | eval fenv (EIdent id) = unimplemented "eval/EIdent"
-  | eval fenv (ECall (name,e)) = 
-                evalCall fenv (lookup name fenv) (eval fenv e)
+  | eval fenv (EIdent id) = applyIdent id fenv
+  | eval fenv (ECall (name,e)) = evalCall fenv (lookup name fenv) (eval fenv e)
   | eval fenv (ESlet (bnds,e)) = (evalSLet fenv (evalBindings fenv bnds) e)
-  | eval fenv (ECons (e1,e2)) = unimplemented "eval/ECons"
-  | eval fenv (EIsEmpty e) = unimplemented "eval/EIsEmpty"
-  | eval fenv (EHead e) = unimplemented "eval/EHead"
-  | eval fenv (ETail e) = unimplemented "eval/ETail"
+  | eval fenv (ECons (e1,e2)) = applyCons (eval fenv e1) (eval fenv e2)
+  | eval fenv (EIsEmpty e) = applyIsEmpty (eval fenv e)
+  | eval fenv (EHead e) = applyHead (eval fenv e)
+  | eval fenv (ETail e) = applyTail (eval fenv e)
   | eval fenv (EPair (e1,e2)) = applyPair (eval fenv e1) (eval fenv e2)
   | eval fenv (EFirst e) = applyFirst (eval fenv e) 
   | eval fenv (ESecond e) = applySecond (eval fenv e)
-  | eval fenv (ECallE (func, e)) = unimplemented "eval/ECallE"
+  | eval fenv (ECallE (func, e)) = evalCallE (eval fenv func) (eval fenv e) fenv
+
+and applyIdent id fenv=
+  (VFun (lookup id fenv))
+
+and evalCallE (VFun (FDef (param,body))) e fenv=
+    eval fenv (subst body param (EVal e))
 
 and evalCall fenv (FDef (param,body)) arg = 
       eval fenv (subst body param (EVal arg))
