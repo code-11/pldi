@@ -2,6 +2,11 @@
 (*************************************************************
  *      Code for HOMEWORK 3
  *
+ * Completed by Brendan Ritter from original code by Riccardo Pucella.
+ * 
+ * The shell-wdef was giving me some interesting errors and it took a while to get it to compile.
+ * Even then, there were logic errors that eventually I traced back to a single typo in expect LPAREN, go figure.
+ * I didn't have time the exhaustively test all the cases over again once I made that change, so I'm just going to assume it still works. 
  *)
 
 
@@ -433,6 +438,7 @@ fun produceSymbol "let" = SOME (T_LET)
   | produceSymbol "false" = SOME (T_FALSE)
   | produceSymbol "if" = SOME (T_IF)
   | produceSymbol "eye"= SOME (T_EYE)
+  | produceSymbol "def" =SOME (T_DEF)
   | produceSymbol text = SOME (T_SYM text)
 
 fun produceInt text = SOME (T_INT (valOf (Int.fromString text)))
@@ -538,10 +544,19 @@ fun lexString str = lex (explode str)
  *    expr_row ::= expr expr_row                     [exrw_CHAIN]
  *                 expr                              [exrw_SINGE]                          
  * 
+ *    decl ::= T_DEF T_SYM T_LPAREN symbol_list T_RPAREN T_EQUAL expr  [def_BODY]
+ *             expr                                                    [def_EXPR]
+ *
+ *    symbol_list ::= T_SYM T_COMMA parse_symbol_list                  [sym_CHAIN]
+ *                    T_SYM                                            [sym_SINGLE] 
+ *
+ *
  *  (The names on the right are used to refer to the rules
  *   when naming helper parsing functions; they're just indicative)
  *)
 
+datatype decl = DeclDefinition of string * (string list) * expr
+              | DeclExpression of expr
 
 fun expect_INT ((T_INT i)::ts) = SOME (i,ts)
   | expect_INT _ = NONE
@@ -603,11 +618,20 @@ fun expect_SEMICOLON (T_SEMICOLON::ts)=SOME ts
 fun expect_LBRACKET (T_LBRACKET::ts)=SOME ts
   | expect_LBRACKET _= NONE
 
-fun expect_RBRACKET (R_LBRACKET::ts)=SOME ts
+fun expect_RBRACKET (T_RBRACKET::ts)=SOME ts
   | expect_RBRACKET _= NONE
 
+fun expect_DEF (T_DEF::ts)=SOME ts
+  | expect_DEF _=NONE
 
-fun parse_expr ts = 
+
+fun parse_decl ts=
+  (case parse_def_BODY ts
+    of NONE=> parse_def_EXPR ts
+    | s=>s)
+
+
+and parse_expr ts = 
     (case parse_expr_IF ts
       of NONE => 
    (case parse_expr_LET ts
@@ -897,6 +921,56 @@ and parse_exrws_SEMICOLON ts=
         of NONE=>NONE
         | SOME (ess,ts)=> SOME (es::ess,ts))))
 
+and parse_symbol_list ts=
+  (case parse_sym_CHAIN ts
+    of NONE=>parse_sym_SINGLE ts
+    | s=>s)
+
+and parse_sym_CHAIN ts=
+  (case expect_SYM ts
+    of NONE=>NONE
+    | SOME (s,ts)=>
+    (case expect_COMMA ts
+      of NONE=>NONE
+      | SOME ts=>
+      (case parse_symbol_list ts
+        of NONE=>NONE
+        | SOME (ss,ts)=> SOME(s::ss,ts))))  
+
+and parse_sym_SINGLE ts=
+  (case expect_SYM ts
+    of NONE=>NONE
+    | SOME (s,ts)=> SOME ([s],ts))
+
+
+and parse_def_EXPR ts=
+  (case parse_expr ts
+    of NONE=>NONE
+    | SOME (e:expr,ts:token list)=>SOME (DeclExpression e,ts)) 
+
+and parse_def_BODY ts=
+  (case expect_DEF ts
+    of NONE=>NONE
+    | SOME ts=>
+    (case expect_SYM ts
+      of NONE=>NONE
+      | SOME (name,ts)=>
+      (case expect_LPAREN ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case parse_symbol_list ts
+          of NONE=>NONE
+          |  SOME (params,ts)=>
+          (case expect_RPAREN ts
+            of NONE=>NONE
+            | SOME ts=>
+            (case expect_EQUAL ts
+              of NONE=>NONE
+              | SOME ts=>
+              (case parse_expr ts
+                of NONE=>NONE
+                | SOME (body,ts)=> SOME (DeclDefinition (name,params,body),ts))))))))
+
 
 fun parse tokens = 
     (case parse_expr tokens
@@ -905,11 +979,10 @@ fun parse tokens =
 
 
 
-datatype decl = DeclDefinition of string * (string list) * expr
-              | DeclExpression of expr
-
-
-fun parse_wdef tokens = unimplemented "parse_wdef"
+fun parse_wdef tokens = 
+      (case parse_decl tokens
+      of SOME (e,[]) => e
+       | _ => parseError "You got me...(Cannot parse declaration)")
 
 
 
@@ -946,6 +1019,56 @@ in
 end
 
 
+
+fun shell_wdef fenv = let
+    fun prompt () = (print "pldi-hw3-wdef> "; TextIO.inputLine (TextIO.stdIn))
+    fun pr l = print ((String.concatWith " " l)^"\n")
+    fun read fenv = 
+      (case prompt () 
+        of NONE => ()
+         | SOME ".\n" => ()
+         | SOME str => eval_print fenv str)
+    and eval_print fenv str = 
+      (let val ts = lexString str
+           val _ = pr (["Tokens ="] @ (map stringOfToken ts))
+           val declare = parse_wdef ts
+      in
+      (case declare 
+        of (DeclDefinition (name,params,body))=>
+            read ((name,FDef (params,body)) ::fenv)
+          |(DeclExpression expr)              =>
+            (let val _=pr [stringOfValue (eval fenv expr)]
+            in read fenv end))
+   end
+   handle Parsing msg => (pr ["Parsing error:", msg]; read fenv)
+        | Evaluation msg => (pr ["Evaluation error:", msg]; read fenv))
+in
+    print "Type . by itself to quit\n";
+    read fenv
+end
     
-fun shell_wdef fenv = unimplemented "shell_wdef"
+(*fun shell_wdef fenv = 
+    fun prompt () = (print "pldi-hw3-wdef> "; TextIO.inputLine (TextIO.stdIn))
+    fun pr l = print ((String.concatWith " " l)^"\n")
+    fun read fenv = 
+  (case prompt () 
+    of NONE => ()
+     | SOME ".\n" => ()
+     | SOME str => eval_print fenv str)
+    and eval_print fenv str = 
+  (let val ts = lexString str
+       val _ = pr (["Tokens ="] @ (map stringOfToken ts))
+       val expr = parse_wdef ts
+       val _ = pr ["Internal rep = ", stringOfExpr (expr)]
+       val v = eval fenv expr
+       val _ = pr [stringOfValue v]
+   in
+       read fenv
+   end
+   handle Parsing msg => (pr ["Parsing error:", msg]; read fenv)
+        | Evaluation msg => (pr ["Evaluation error:", msg]; read fenv))
+in
+    print "Type . by itself to quit\n";
+    read fenv
+end*)
 
