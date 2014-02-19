@@ -445,6 +445,9 @@ fun produceLParen _ = SOME (T_LPAREN)
 fun produceRParen _ = SOME (T_RPAREN)
 fun produceSlash _ = SOME (T_SLASH)
 fun produceComma _ = SOME (T_COMMA)
+fun produceLBracket _ = SOME (T_LBRACKET)
+fun produceRBracket _ = SOME (T_RBRACKET)
+fun produceSemicolon _ = SOME (T_SEMICOLON) 
 
 val tokens = let 
     fun convert (re,f) = (R.compileString re, f)
@@ -459,7 +462,10 @@ in
      ("\\(",                  produceLParen),
      ("\\)",                  produceRParen),
      (",",                    produceComma),
-     ("/",                    produceSlash)]
+     ("/",                    produceSlash),
+     ("\\[",                  produceLBracket),
+     ("\\]",                  produceRBracket),
+     (";",                    produceSemicolon)]
 end
 
 
@@ -520,10 +526,17 @@ fun lexString str = lex (explode str)
  *   factor ::= T_INT                                [term_INT]
  *              T_TRUE                               [term_TRUE]
  *              T_FALSE                              [term_FALSE]
-                T_EYE T_LPAREN expr T_RPAREN         [term EYE]
+ *              T_EYE T_LPAREN expr T_RPAREN         [term EYE]
  *              T_SYM T_LPAREN expr_list T_RPAREN    [term_CALL]
  *              T_SYM                                [term_SYM]
  *              T_LPAREN expr TRPAREN                [term_PARENS]
+ *              T_LBRACKET expr_rows T_RBRACKET      [term_BRACKETS]
+ *
+ *    expr_rows ::= expr_row T_SEMICOLON expr_rows   [exrws_SEMICOLON]
+ *                  expr_row                         [exrws_ROW]
+ *
+ *    expr_row ::= expr expr_row                     [exrw_CHAIN]
+ *                 expr                              [exrw_SINGE]                          
  * 
  *  (The names on the right are used to refer to the rules
  *   when naming helper parsing functions; they're just indicative)
@@ -584,6 +597,14 @@ fun expect_COMMA (T_COMMA::ts) = SOME ts
 fun expect_EYE (T_EYE::ts)=SOME ts
   | expect_EYE _ =  NONE
 
+fun expect_SEMICOLON (T_SEMICOLON::ts)=SOME ts
+  | expect_SEMICOLON _= NONE
+
+fun expect_LBRACKET (T_LBRACKET::ts)=SOME ts
+  | expect_LBRACKET _= NONE
+
+fun expect_RBRACKET (R_LBRACKET::ts)=SOME ts
+  | expect_RBRACKET _= NONE
 
 
 fun parse_expr ts = 
@@ -755,10 +776,13 @@ and parse_factor ts =
             of NONE => 
               (case parse_factor_CALL ts
                 of NONE => 
-                  (case parse_factor_EYE ts
-                    of NONE =>
-                      (case parse_factor_SYM ts
-                        of NONE => parse_factor_PARENS ts
+                  (case parse_factor_BRACKETS ts
+                    of NONE=>
+                      (case parse_factor_EYE ts
+                        of NONE =>
+                          (case parse_factor_SYM ts
+                            of NONE => parse_factor_PARENS ts
+                            | s => s)
                         | s => s)
                     | s => s)
                 | s => s)
@@ -824,6 +848,55 @@ and parse_factor_EYE ts=
           (case expect_RPAREN ts
             of NONE=>NONE
             | SOME ts=>SOME (EEye e,ts)))))
+
+and parse_factor_BRACKETS ts=
+  (case expect_LBRACKET ts
+    of NONE=>NONE
+    | SOME ts=>
+    (case parse_expr_rows ts
+      of NONE=>NONE
+      | SOME (e,ts)=>
+      (case expect_RBRACKET ts
+        of NONE=>NONE
+        | SOME ts=>SOME (EMatrix e,ts))))
+
+and parse_expr_row ts=
+  (case parse_exrw_CHAIN ts
+    of NONE=> parse_exrw_SINGLE ts
+    | s=>s)
+
+and parse_exrw_CHAIN ts=
+  (case parse_expr ts
+    of NONE=> NONE
+    | SOME (e,ts)=>
+    (case parse_expr_row ts
+      of NONE=>NONE
+      | SOME (es,ts)=> SOME (e::es,ts)))
+
+and parse_exrw_SINGLE ts=
+  (case parse_expr ts
+    of NONE=>NONE
+    | SOME (e,ts)=>SOME ([e],ts))
+
+and parse_expr_rows ts=
+  (case parse_exrws_SEMICOLON ts
+    of NONE=> 
+      (case parse_expr_row ts
+        of NONE=>NONE
+        | SOME (es,ts)=>SOME ([es],ts))
+    | s=>s)
+
+and parse_exrws_SEMICOLON ts=
+  (case parse_expr_row ts
+    of NONE=>NONE
+    | SOME (es,ts)=>
+    (case expect_SEMICOLON ts
+      of NONE=>NONE
+      | SOME ts=>
+      (case parse_expr_rows ts
+        of NONE=>NONE
+        | SOME (ess,ts)=> SOME (es::ess,ts))))
+
 
 fun parse tokens = 
     (case parse_expr tokens
