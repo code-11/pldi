@@ -7,7 +7,12 @@
  * The shell-wdef was giving me some interesting errors and it took a while to get it to compile.
  * Even then, there were logic errors that eventually I traced back to a single typo in expect LPAREN, go figure.
  * I didn't have time the exhaustively test all the cases over again once I made that change, so I'm just going to assume it still works. 
- *)
+ *
+ * For the implement your own functionality, I tried to implement the modulus operator.
+ * I have it working for VRats, but not for matrices. You can see my illness impaired attempts to apply it to matrices in and around applyMod.
+ *
+ *
+ )
 
 
 
@@ -48,6 +53,7 @@ datatype expr = EVal of value
         | ESub of expr * expr
               | EMul of expr * expr
               | EDiv of expr * expr
+              | EMod of expr * expr
         | EEq of expr * expr
               | EIf of expr * expr * expr
               | ELet of string * expr * expr
@@ -96,6 +102,7 @@ fun stringOfExpr e = let
       | strE (ESub (e1,e2)) = strCon "ESub" strE [e1,e2]
       | strE (EMul (e1,e2)) = strCon "EMul" strE [e1,e2]
       | strE (EDiv (e1,e2)) = strCon "EDiv" strE [e1,e2]
+      | strE (EMod (e1,e2)) = strCon "EMOD" strE [e1,e2]
       | strE (EEye (e)) = strCon "EEye" strE [e]
       | strE (EEq (e1,e2)) = strCon "EEq" strE [e1,e2]
       | strE (EIf (e1,e2,e3)) = strCon "EIf" strE [e1,e2,e3]
@@ -262,6 +269,24 @@ in
     mapMat recip m
 end
 
+fun applyMod (VRat (a,b)) (VRat (c,d))= 
+    if b=1
+    then if d=1
+         then VRat ((a mod c), 1)
+         else evalError "It seemed like a good idea at the time...(type error in modulus)"  
+    else evalError "It seemed like a good idea at the time...(type error in modulus)"  
+(*    | applyMod (VMat m) (VRat (a,b))=
+      if b=1
+      then modMat (VMat m) (VRat (a,b))
+      else evalError "It seemed like a good idea at the time...(type error in modulus)"     
+*)
+    | applyMod _ _=evalError "It seemed like a good idea at the time...(type error in modulus)"  
+
+(*and modMat m (VRat (a,b))= let
+    fun modMatInner v= applyMod (VRat (a,b)) v
+in 
+    mapMat modMatInner m
+end*)
 
 fun applyEq (VRat r) (VRat s) = VBool (r=s)
   | applyEq (VBool b) (VBool c) = VBool (b=c)
@@ -285,6 +310,7 @@ fun subst (EVal v) id e = EVal v
   | subst (EMul (f,g)) id e = EMul (subst f id e, subst g id e)
   | subst (ESub (f,g)) id e = ESub (subst f id e, subst g id e)
   | subst (EDiv (f,g)) id e = EDiv (subst f id e, subst g id e)
+  | subst (EMod (f,g)) id e = EMod (subst f id e, subst g id e)
   | subst (EEq (f,g)) id e = EEq (subst f id e, subst g id e)
   | subst (EIf (f,g,h)) id e = EIf (subst f id e, 
                                     subst g id e,
@@ -326,6 +352,7 @@ fun eval _ (EVal v) = v
   | eval fenv (EMul (e,f)) = applyMul (eval fenv e) (eval fenv f)
   | eval fenv (ESub (e,f)) = applySub (eval fenv e) (eval fenv f)
   | eval fenv (EDiv (e,f)) = applyDiv (eval fenv e) (eval fenv f)
+  | eval fenv (EMod (e,f)) = applyMod (eval fenv e) (eval fenv f)
   | eval fenv (EEq (e,f)) = applyEq (eval fenv e) (eval fenv f)
   | eval fenv (EIf (e,f,g)) = evalIf fenv (eval fenv e) f g
   | eval fenv (ELet (name,e,f)) = evalLet fenv name (eval fenv e) f
@@ -409,6 +436,7 @@ datatype token = T_LET
                | T_LBRACKET
                | T_RBRACKET
                | T_DEF
+               | T_MOD
 
 fun stringOfToken T_LET = "T_LET"
   | stringOfToken (T_SYM s) = "T_SYM["^s^"]"
@@ -429,6 +457,7 @@ fun stringOfToken T_LET = "T_LET"
   | stringOfToken T_SEMICOLON = "T_SEMICOLON"
   | stringOfToken T_LBRACKET = "T_LBRACKET"
   | stringOfToken T_RBRACKET = "T_RBRACKET"
+  | stringOfToken T_MOD ="T_MOD"
 
 
 fun whitespace _ = NONE
@@ -454,6 +483,7 @@ fun produceComma _ = SOME (T_COMMA)
 fun produceLBracket _ = SOME (T_LBRACKET)
 fun produceRBracket _ = SOME (T_RBRACKET)
 fun produceSemicolon _ = SOME (T_SEMICOLON) 
+fun produceMod _ =SOME (T_MOD)
 
 val tokens = let 
     fun convert (re,f) = (R.compileString re, f)
@@ -471,6 +501,7 @@ in
      ("/",                    produceSlash),
      ("\\[",                  produceLBracket),
      ("\\]",                  produceRBracket),
+     ("%",                    produceMod),
      (";",                    produceSemicolon)]
 end
 
@@ -527,6 +558,7 @@ fun lexString str = lex (explode str)
  *
  *   term ::= factor T_TIMES term                    [term_TIMES]
  *            factor T_SLASH term                    [term_SLASH]
+              factor T_MOD term                      [term_MOD]
  *            factor                                 [term_FACTOR]
  *
  *   factor ::= T_INT                                [term_INT]
@@ -623,6 +655,9 @@ fun expect_RBRACKET (T_RBRACKET::ts)=SOME ts
 
 fun expect_DEF (T_DEF::ts)=SOME ts
   | expect_DEF _=NONE
+
+fun expect_MOD (T_MOD::ts)=SOME ts
+  | expect_MOD _=NONE
 
 
 fun parse_decl ts=
@@ -759,8 +794,11 @@ and parse_eterm_TERM ts = parse_term ts
 and parse_term ts = 
     (case parse_term_TIMES ts
       of NONE => 
-   (case parse_term_SLASH ts
-     of NONE => parse_term_FACTOR ts
+    (case parse_term_SLASH ts
+      of NONE => 
+    (case parse_term_MOD ts
+      of NONE =>parse_term_FACTOR ts
+      | s => s)
       | s => s)
       | s => s)
 
@@ -785,6 +823,17 @@ and parse_term_SLASH ts =
         (case parse_term ts
     of NONE => NONE
     | SOME (e2,ts) => SOME (EDiv (e1,e2),ts))))
+
+and parse_term_MOD ts=
+  (case parse_factor ts
+    of NONE=>NONE
+    | SOME (e1,ts) =>
+    (case expect_MOD ts
+      of NONE=>NONE
+      | SOME ts=>
+      (case parse_term ts
+        of NONE=>NONE
+        | SOME (e2,ts) => SOME (EMod (e1,e2),ts))))
 
 and parse_term_FACTOR ts = parse_factor ts
 
