@@ -1095,29 +1095,4 @@ in
     print "Type . by itself to quit\n";
     read fenv
 end
-    
-(*fun shell_wdef fenv = 
-    fun prompt () = (print "pldi-hw3-wdef> "; TextIO.inputLine (TextIO.stdIn))
-    fun pr l = print ((String.concatWith " " l)^"\n")
-    fun read fenv = 
-  (case prompt () 
-    of NONE => ()
-     | SOME ".\n" => ()
-     | SOME str => eval_print fenv str)
-    and eval_print fenv str = 
-  (let val ts = lexString str
-       val _ = pr (["Tokens ="] @ (map stringOfToken ts))
-       val expr = parse_wdef ts
-       val _ = pr ["Internal rep = ", stringOfExpr (expr)]
-       val v = eval fenv expr
-       val _ = pr [stringOfValue v]
-   in
-       read fenv
-   end
-   handle Parsing msg => (pr ["Parsing error:", msg]; read fenv)
-        | Evaluation msg => (pr ["Evaluation error:", msg]; read fenv))
-in
-    print "Type . by itself to quit\n";
-    read fenv
-end*)
 
