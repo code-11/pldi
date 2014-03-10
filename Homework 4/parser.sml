@@ -393,8 +393,97 @@ structure Parser =  struct
 	      parse_aterm_IF,
 	      parse_aterm_LET,
 	      parse_aterm_LET_FUN,
-        parse_aterm_BRACKET
+        parse_aterm_BRACKET,
+        parse_aterm_MATCH,
+        parse_aterm_BRACE,
+        parse_aterm_HASH
 	     ] ts
+
+  and parse_aterm_HASH ts =
+    (case expect_HASH ts
+      of NONE => NONE
+       | SOME ts =>
+         case expect_SYM ts
+          of NONE => NONE
+           | SOME (s,ts) => 
+            case parse_expr ts
+              of NONE => NONE
+               | SOME (e,ts) => SOME (I.EField (e,s),ts))
+
+  and parse_aterm_BRACE ts=
+    (case expect_LBRACE ts
+      of NONE=>NONE
+      | SOME ts=>
+      (case parse_fields ts
+        of NONE=>NONE
+        | SOME (e,ts)=>
+        (case expect_RBRACE ts
+          of NONE=>NONE
+          | SOME ts=>SOME (e,ts))))
+
+  and parse_fields ts=
+    (case expect_SYM ts
+      of NONE=>SOME(I.ERecord [],ts)
+      | SOME (s,ts)=>
+      (case expect_EQUAL ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case parse_expr ts
+          of NONE=>NONE
+          | SOME (e,ts)=>
+          (case expect_COMMA ts
+            of NONE=> SOME (I.ERecord [(s,e)],ts)
+            |SOME ts=>
+            (case parse_fields ts
+              of NONE=>NONE
+              | SOME (I.ERecord r,ts)=>SOME (I.ERecord ((s,e)::r),ts)
+              | SOME _ => NONE)))))
+
+  and parse_aterm_MATCH ts=
+    (case expect_MATCH ts
+      of NONE=>NONE
+      | SOME ts=>
+      (case parse_expr ts
+        of NONE=>NONE
+        | SOME (e1,ts)=>
+        (case expect_WITH ts
+          of NONE=>NONE
+          |SOME ts=>
+          (case expect_LBRACKET ts
+            of NONE=> NONE
+            | SOME ts=>
+            (case expect_RBRACKET ts
+              of NONE=>NONE
+              | SOME ts=>
+              (case expect_RARROW ts
+                of NONE=>NONE
+                | SOME ts=>
+                (case parse_expr ts
+                  of NONE=>NONE
+                  | SOME (e2,ts)=>
+                  (case expect_BAR ts
+                    of NONE=>NONE
+                    |SOME ts=>
+                    (case expect_SYM ts
+                      of NONE=>NONE
+                      | SOME (s1,ts)=>
+                      (case expect_DCOLON ts
+                        of NONE=>NONE
+                        | SOME ts=>
+                        (case expect_SYM ts
+                          of NONE=>NONE
+                          | SOME (s2,ts)=>
+                          (case expect_RARROW ts
+                            of NONE=>NONE
+                            | SOME ts=>
+                            (case parse_expr ts
+                              of NONE=>NONE
+                              |SOME (e3,ts)=> 
+                              SOME (I.EIf(I.EApp(I.EApp(I.EIdent "equal",e1),(I.EVal(I.VList []))),
+                                e2,(I.ELet(s1,(I.EApp(I.EIdent "hd",e1)),
+                                  I.ELet(s2,(I.EApp(I.EIdent "tl",e1)),e3)))),ts)
+                            )))))))))))))
+
 
   and parse_aterm_BRACKET ts =
     (case expect_LBRACKET ts
@@ -407,7 +496,7 @@ structure Parser =  struct
               | SOME ts=> SOME ((I.EVal (I.VList [])),ts))
           | SOME (e,ts)=> 
             (case expect_RBRACKET ts
-              of NONE=>NONE
+              of NONE=> NONE
               | SOME ts=> SOME(e,ts))))
 
   and parse_expr_list ts=
@@ -415,7 +504,32 @@ structure Parser =  struct
       of NONE=>NONE
       | SOME (e1,ts)=>
       (case expect_COMMA ts
-        of NONE=>SOME ((I.EApp (I.EApp (I.EIdent "cons", e1),(I.EVal (I.VList [])))),ts)
+        of NONE=>
+        (case expect_DDOTS ts
+        of NONE =>
+          (case expect_BAR ts
+            of NONE=> SOME ((I.EApp (I.EApp (I.EIdent "cons", e1),(I.EVal (I.VList [])))),ts)
+            |  SOME ts=>
+              (case expect_SYM ts
+                of NONE=>NONE
+                | SOME (s,ts)=>
+                (case expect_LARROW ts
+                  of NONE=> NONE
+                  | SOME ts=>
+                  (case parse_expr ts
+                    of NONE=>NONE
+                    | SOME (e2,ts)=>
+                    (case expect_COMMA ts
+                      of NONE=>NONE
+                      | SOME ts=>
+                      (case parse_expr ts
+                        of NONE=>NONE
+                        | SOME (e3,ts)=> SOME (I.EApp (I.EApp (I.EIdent "map",I.EFun(s,e1)), 
+                          I.EApp (I.EApp (I.EIdent "filter",I.EFun(s,e3)),e2)),ts) ))))))         
+         | SOME ts =>
+          (case parse_expr ts
+            of NONE => NONE
+             | SOME (e2,ts) => SOME (I.EApp(I.EApp(I.EIdent "interval",e1),e2),ts)))
         | SOME ts =>
           (case parse_expr_list ts
             of NONE=>NONE

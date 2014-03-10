@@ -52,8 +52,22 @@ structure Evaluator = struct
   fun primHd (I.VList a) = List.hd(a)
     | primHd _ = evalError "primHd - not a list"
 
+  fun primInterval (I.VInt i) (I.VInt j)=
+    if (j<i) 
+      then (I.VList []) 
+      else (primCons (I.VInt i) (primInterval (I.VInt (i+1)) (I.VInt j)))
+    | primInterval a _= evalError "Type error in primInterval"
 
 
+
+
+(*  fun primMap (I.EFun f) (I.VList []) = I.VList []
+    | primMap (I.EFun (name,ex)) (I.VList xs)=
+    let val expr= (I.EApp ((I.EFun (name,ex)),(I.EVal (primHd(I.VList xs))))) in
+    let val value= I.VClosure(name,ex,[]) in 
+      (primCons value (primMap (I.EFun (name,ex)) primTl(I.VList xs)))
+    end
+    end*)
 
 			 
   fun lookup (name:string) [] = evalError ("failed lookup for "^name)
@@ -61,6 +75,10 @@ structure Evaluator = struct
         if (n = name) then 
 	  v
 	else lookup name env 
+
+  fun extractList (I.VRecord ts)=ts
+    | extractList _ =evalError "Not a Record"
+
 
 
   (*
@@ -78,8 +96,8 @@ structure Evaluator = struct
     | eval env (I.EApp (e1,e2)) = evalApp env (eval env e1) (eval env e2)
     | eval env (I.EPrimCall1 (f,e1)) = f (eval env e1)
     | eval env (I.EPrimCall2 (f,e1,e2)) = f (eval env e1) (eval env e2)
-    | eval env (I.ERecord fs) = evalError "ERecord not implemented"
-    | eval env (I.EField (e,s)) = evalError "EField not implemented"
+    | eval env (I.ERecord fs) = I.VRecord (evalRecord env fs)
+    | eval env (I.EField (e,s)) = lookup s (extractList (eval env e))
       
   and evalApp _ (I.VClosure (n,body,env)) v = eval ((n,v)::env) body
     | evalApp _ (I.VRecClosure (f,n,body,env)) v = let
@@ -99,8 +117,24 @@ structure Evaluator = struct
       val f = I.VRecClosure (id, param, expr, env)
   in
       eval ((id,f)::env) body
-  end
+  end 
 
+  and evalRecord env [] = []
+    | evalRecord env ((n,e)::xs) = (n,eval env e)::evalRecord env xs
+
+
+  fun primMap (I.VClosure f) (I.VList []) = I.VList []
+    | primMap (I.VClosure f) (I.VList xs) = 
+        primCons (eval [] (I.EApp ((I.EVal (I.VClosure f)),(I.EVal (primHd(I.VList xs)))))) (primMap (I.VClosure f) (primTl (I.VList xs)))
+    | primMap _ _= evalError "Type error in primMap"
+
+
+  fun primFilter (I.VClosure f) (I.VList []) = I.VList [] 
+    | primFilter (I.VClosure f) (I.VList xs)= 
+      (eval [] (I.EIf(I.EApp (I.EVal (I.VClosure f),I.EVal (primHd (I.VList xs))),
+        I.EVal (primCons (primHd (I.VList xs)) (primFilter (I.VClosure f) (primTl (I.VList xs)))),
+        I.EVal (primFilter (I.VClosure f) (primTl (I.VList xs))))))
+    | primFilter _ _= evalError "Type error in primFilter"
 
   (* 
    *   Initial environment (already in a form suitable for the environment)
@@ -139,6 +173,27 @@ structure Evaluator = struct
 
         ("tl", I.VClosure ("a",
           I.EPrimCall1 (primTl, I.EIdent "a"),
+          [])),
+
+        ("interval",I.VClosure("a",
+          I.EFun("b",
+            I.EPrimCall2 (primInterval,
+              I.EIdent "a",
+              I.EIdent "b")),
+          [])),
+
+        ("map",I.VClosure("f",
+          I.EFun("xs",
+            I.EPrimCall2(primMap,
+              I.EIdent "f",
+              I.EIdent "xs")),
+          [])),
+
+        ("filter",I.VClosure("f",
+          I.EFun("xs",
+            I.EPrimCall2(primFilter,
+              I.EIdent "f",
+              I.EIdent "xs")),
           [])),
 
         ("cons", I.VClosure ("a",
