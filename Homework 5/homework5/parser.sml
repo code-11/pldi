@@ -198,8 +198,10 @@ structure Parser =  struct
    *            T_WHILE expr stmt
    *            T_SYM T_LEFTARROW expr
    *            T_SYM T_LPAREN expr_list T_RPAREN
+
    *            T_PRINT T_LPAREN expr_list T_RPAREN
-   *            T_LBRACE T_RBRACE
+   *            T_LBRACE T_RBRACE 
+                T_LBRACE exp_var T_SEMICOLON stmt_list T_RBRACE
    *            T_LBRACE stmt_list T_RBRACE
                 T_SYM T_LPAREN expr T_RPAREN T_LEFTARROW expr
 
@@ -348,6 +350,29 @@ structure Parser =  struct
 
 
   and parse_stmt ts = let
+
+    fun stmt_LETVAR ts=
+      (case expect T_LETVAR ts
+        of NONE=>NONE
+        | SOME ts => 
+          (case expect_SYM ts
+            of NONE=>NONE
+            | SOME (s,ts)=>
+            (case expect T_EQUAL ts
+              of NONE=>NONE
+              | SOME ts=>
+              (case parse_expr ts
+                of NONE=>NONE
+                | SOME (e,ts)=>
+                  (case expect T_IN ts
+                    of NONE=>NONE
+                    | SOME ts=>
+                    (case parse_stmt ts
+                      of NONE=>NONE
+                      | SOME (stmt,ts)=>SOME (I.SVar(s,e,stmt),ts)))))))
+
+
+
     fun stmt_IF ts = 
 	(case expect T_IF ts
 	  of NONE => NONE
@@ -412,6 +437,7 @@ structure Parser =  struct
 		       (case expect T_RPAREN ts
 			 of NONE => NONE
 			  | SOME ts => SOME (I.SPrint es,ts)))))
+
     fun stmt_BLOCK_EMPTY ts = 
 	(case expect T_LBRACE ts
 	  of NONE => NONE
@@ -419,8 +445,29 @@ structure Parser =  struct
 	     (case expect T_RBRACE ts
 	       of NONE => NONE
 		| SOME ts => SOME (I.SBlock [],ts)))
-    fun stmt_BLOCK ts = 
-	(case expect T_LBRACE ts
+
+  fun stmt_LETVARWRAP ts=
+    (case expect T_VAR ts
+    of NONE=>NONE
+    | SOME ts =>
+      (case expect_SYM ts
+        of NONE=>NONE
+        | SOME (s,ts) =>
+        (case expect T_EQUAL ts
+          of NONE=>NONE
+          | SOME ts=>
+          (case parse_expr ts
+            of NONE=>NONE
+            | SOME (e,ts)=>
+            (case expect T_SEMICOLON ts
+              of NONE => SOME (I.SVar(s,e, I.SBlock []),ts)
+              | SOME ts =>
+              (case parse_stmt_list ts
+                of NONE=>NONE
+                | SOME (ss,ts)=>SOME (I.SVar(s,e,I.SBlock ss),ts))))))) 
+
+
+    fun stmt_BLOCK ts =	(case expect T_LBRACE ts
 	  of NONE => NONE
 	   | SOME ts => 
 	     (case parse_stmt_list ts
@@ -452,7 +499,7 @@ structure Parser =  struct
 
   in
     choose [stmt_IF, stmt_WHILE, stmt_UPDATE,stmt_UPDATEHD, stmt_CALL, stmt_PRINT,
-	    stmt_BLOCK_EMPTY, stmt_BLOCK] ts
+	    stmt_BLOCK_EMPTY,stmt_LETVARWRAP, stmt_BLOCK,stmt_LETVAR] ts
   end
 
 
