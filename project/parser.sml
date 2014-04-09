@@ -37,9 +37,6 @@ structure Parser =  struct
   exception Parsing of string
 
   fun parseError msg = raise Parsing msg
-                         
-                         
-
 
   (* 
    *   A simple lexer
@@ -76,6 +73,9 @@ structure Parser =  struct
                  | T_SUPER
                  | T_THIS
                  | T_NULL
+                 | T_DOT
+                 | T_FUNCSCOPE
+                 | T_STATIC
 
   fun stringOfToken (T_SYM s) = "T_SYM["^s^"]"
     | stringOfToken (T_INT i) = "T_INT["^(Int.toString i)^"]"
@@ -106,6 +106,9 @@ structure Parser =  struct
     | stringOfToken T_SUPER = "T_SUPER"
     | stringOfToken T_THIS = "T_THIS"
     | stringOfToken T_NULL = "T_NULL"
+    | stringOfToken T_DOT = "T_DOT"
+    | stringOfToken T_FUNCSCOPE ="T_FUNCSCOPE"
+    | stringOfToken T_STATIC = "T_STATIC"
 
                    
   fun whitespace _ = NONE
@@ -126,6 +129,14 @@ structure Parser =  struct
     | produceSymbol "super" = SOME (T_SUPER)
     | produceSymbol "this" = SOME (T_THIS)
     | produceSymbol "null" = SOME (T_NULL)
+    | produceSymbol "public" =SOME (T_FUNCSCOPE)
+    | produceSymbol "private" =SOME (T_FUNCSCOPE)
+    | produceSymbol "static" = SOME (T_STATIC)
+(*    | produceSymbol "void" =NONE
+    | produceSymbol "String"=NONE
+    | produceSymbol "int"=NONE
+    | produceSymbol "float"=NONE
+    | produceSymbol "double"=NONE*)
     | produceSymbol text = SOME (T_SYM text)
 
   fun produceString text = SOME (T_STRING text)
@@ -144,10 +155,11 @@ structure Parser =  struct
   fun producePlus _ = SOME (T_PLUS)
   fun produceTimes _ = SOME (T_TIMES)
   fun produceComma _ = SOME (T_COMMA)
-  fun produceAssign _ =SOME (T_ASSIGN)
+  fun produceAssign _ = SOME (T_ASSIGN)
+  fun produceDot _= SOME (T_DOT)
 
   fun produceSemiColon _ = SOME (T_SEMICOLON)
-                       
+  
   val tokens = let 
     fun convert (re,f) = (R.compileString re, f)
   in
@@ -164,7 +176,8 @@ structure Parser =  struct
                  ("{",                    produceLBrace),
                  ("}",                    produceRBrace),
                  ("=",                    produceAssign),
-                 ("\\"[^\\"]*\\"",   produceString)]
+                 (".",                    produceDot)]
+                 (*("\\"[^\\"]*\\"",   produceString)]*)
   end
                
                
