@@ -13,12 +13,14 @@ structure Translator =  struct
     | tokenToPyString P.T_EQUAL = "=="
     | tokenToPyString P.T_LPAREN = "("
     | tokenToPyString P.T_RPAREN = ")"
+    | tokenToPyString P.T_LBRACKET = "["
+    | tokenToPyString P.T_RBRACKET = "]"
     | tokenToPyString P.T_PLUS = "+"
     | tokenToPyString P.T_TIMES = "*"
     | tokenToPyString P.T_COMMA = ","
     | tokenToPyString P.T_SEMICOLON = "\n"
     | tokenToPyString P.T_WHILE = "while"
-    | tokenToPyString P.T_LBRACE = ":\n\t"
+    | tokenToPyString P.T_LBRACE = ":\n"
     | tokenToPyString P.T_RBRACE = "\n" (*ANTI TAB*)
     | tokenToPyString P.T_VAR = "T_VAR" (*shouldn't be used*)
     | tokenToPyString P.T_FOR = "for"
@@ -34,6 +36,7 @@ structure Translator =  struct
     | tokenToPyString P.T_DOT = "."
     | tokenToPyString P.T_FUNCSCOPE="def"
     | tokenToPyString P.T_STATIC=""
+    | tokenToPyString P.T_INDENT="\t"
 
 
 	(*takes in a list of tokens, returns a string*)
@@ -44,15 +47,40 @@ structure Translator =  struct
 		| dropUntilNewLineHelp (P.T_LBRACE::ts)= P.T_LBRACE::ts
 		| dropUntilNewLineHelp (P.T_SEMICOLON::ts)= P.T_SEMICOLON::ts
 		| dropUntilNewLineHelp (P.T_RPAREN::ts)= P.T_RPAREN::ts
+		| dropUntilNewLineHelp (P.T_INDENT::ts)=P.T_INDENT::ts
 		| dropUntilNewLineHelp (a::ts)=dropUntilNewLineHelp ts
 		(*If its empty something messed up*)
 
-	fun dropUntilNewLine (t::ts)=(print "IN DROP\n";t::(dropUntilNewLineHelp ts))
+	fun dropUntilNewLine (t::ts)=t::(dropUntilNewLineHelp ts)
 		| dropUntilNewLine []=[]
 
-	fun translate (P.T_ASSIGN::ts) = P.T_ASSIGN::(translate (dropUntilNewLine ts))
-		| translate (t::ts)= t::(translate ts)
-		| translate []=[]
+	fun doubleList [] currList toReturn= List.rev (currList::toReturn)
+		| doubleList (T_COMMA::ts) currList toReturn= doubleList ts [] (currList::toReturn)
+		| doubleList (t::ts) currList toReturn =doubleList ts (t::currList) toReturn
+
+	fun isolateInputs (T_RPAREN::ts)= []
+		| isolateInputs (t::ts)=t::(isolateInputs ts) 
+
+(*	fun dropUntilCommaHelp (P.T_LPAREN::ts) = P.T_LPAREN::ts
+		| dropUntilCommaHelp (P.T_COMMA::ts) = P.T_COMMA::ts
+		| dropUntilCommaHelp (a::ts) = dropUntilCommaHelp ts
+		| dropUntilCommaHelp []=[]
+
+	fun dropUntilComma (t::ts)=t::(dropUntilCommaHelp ts)
+		| dropUntilComma [] = []*)
+
+	fun addIndents 0 ts = ts
+		| addIndents x ts = P.T_INDENT::(addIndents (x-1) ts)
+
+	fun translateHelp (P.T_ASSIGN::ts) level toReturn = (translateHelp ts level (P.T_ASSIGN::(dropUntilNewLine toReturn)))
+		| translateHelp (P.T_LBRACE::ts) level toReturn = (translateHelp ts (level+1) (addIndents (level+1) (P.T_LBRACE::toReturn)))
+		| translateHelp (P.T_SEMICOLON::ts) level toReturn = (translateHelp ts level (addIndents level (P.T_SEMICOLON::toReturn)))
+(*		| translateHelp (P.SYM t::P.T_LPAREN::ts) level toReturn = *)
+		| translateHelp (t::ts) level toReturn= (translateHelp ts level (t::toReturn))
+		| translateHelp [] level toReturn=(List.rev toReturn)
+
+	fun translate ts=translateHelp ts 0 []
+
 
 	fun stringify (t::ts)= (tokenToPyString t)^" "^(stringify ts)
 		|stringify []=""

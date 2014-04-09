@@ -54,6 +54,8 @@ structure Parser =  struct
                  | T_EQUAL
                  | T_LPAREN 
                  | T_RPAREN
+                 | T_RBRACKET
+                 | T_LBRACKET
                  | T_PLUS
                  | T_TIMES
                  | T_COMMA
@@ -76,6 +78,7 @@ structure Parser =  struct
                  | T_DOT
                  | T_FUNCSCOPE
                  | T_STATIC
+                 | T_INDENT
 
   fun stringOfToken (T_SYM s) = "T_SYM["^s^"]"
     | stringOfToken (T_INT i) = "T_INT["^(Int.toString i)^"]"
@@ -88,6 +91,8 @@ structure Parser =  struct
     | stringOfToken T_EQUAL = "T_EQUAL"
     | stringOfToken T_LPAREN = "T_LPAREN"
     | stringOfToken T_RPAREN = "T_RPAREN"
+    | stringOfToken T_LBRACKET = "T_LBRACKET"
+    | stringOfToken T_RBRACKET = "T_RBRACKET"
     | stringOfToken T_PLUS = "T_PLUS"
     | stringOfToken T_TIMES = "T_TIMES"
     | stringOfToken T_COMMA = "T_COMMA"
@@ -109,6 +114,7 @@ structure Parser =  struct
     | stringOfToken T_DOT = "T_DOT"
     | stringOfToken T_FUNCSCOPE ="T_FUNCSCOPE"
     | stringOfToken T_STATIC = "T_STATIC"
+    | stringOfToken T_INDENT ="T_INDENT"
 
                    
   fun whitespace _ = NONE
@@ -131,7 +137,7 @@ structure Parser =  struct
     | produceSymbol "null" = SOME (T_NULL)
     | produceSymbol "public" =SOME (T_FUNCSCOPE)
     | produceSymbol "private" =SOME (T_FUNCSCOPE)
-    | produceSymbol "static" = SOME (T_STATIC)
+    | produceSymbol "static" = NONE
 (*    | produceSymbol "void" =NONE
     | produceSymbol "String"=NONE
     | produceSymbol "int"=NONE
@@ -151,6 +157,9 @@ structure Parser =  struct
 
   fun produceLBrace _ = SOME (T_LBRACE)
   fun produceRBrace  _ = SOME (T_RBRACE)
+
+  fun produceLBracket _=SOME (T_LBRACKET)
+  fun produceRBracket _=SOME (T_RBRACKET)
 
   fun producePlus _ = SOME (T_PLUS)
   fun produceTimes _ = SOME (T_TIMES)
@@ -176,7 +185,9 @@ structure Parser =  struct
                  ("{",                    produceLBrace),
                  ("}",                    produceRBrace),
                  ("=",                    produceAssign),
-                 (".",                    produceDot)]
+                 ("\\[",                    produceLBracket),
+                 ("\\]",                    produceRBracket),
+                 ("\\.",                    produceDot)]
                  (*("\\"[^\\"]*\\"",   produceString)]*)
   end
                
