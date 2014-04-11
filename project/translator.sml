@@ -60,15 +60,19 @@ structure Translator =  struct
 	  Third argument: total list of lists that is being built up*)
 	
 	fun lasts tss=
-		List.map (fn x=> List.hd x) tss
+		List.rev (List.map (fn x=> List.hd x) tss)
 
 	fun doubleList [] currList toReturn= List.rev (currList::toReturn)
-		| doubleList (P.T_COMMA::ts) currList toReturn= doubleList ts [] (currList::toReturn)
+		| doubleList (P.T_COMMA::ts) currList toReturn= doubleList ts [] ([P.T_COMMA]::(currList::toReturn))
 		| doubleList (t::ts) currList toReturn =doubleList ts (t::currList) toReturn
 
 	fun isolateInputs (P.T_RPAREN::ts)= []
 		| isolateInputs (t::ts)=t::(isolateInputs ts) 
 		| isolateInputs _ =raise Match
+
+	fun revIsolateInputs (P.T_RPAREN::ts)= P.T_RPAREN::ts
+		| revIsolateInputs (t::ts)=(revIsolateInputs ts) 
+		| revIsolateInputs _ =raise Match
 
 (*	fun dropUntilCommaHelp (P.T_LPAREN::ts) = P.T_LPAREN::ts
 		| dropUntilCommaHelp (P.T_COMMA::ts) = P.T_COMMA::ts
@@ -84,7 +88,7 @@ structure Translator =  struct
 	fun translateHelp (P.T_ASSIGN::ts) level toReturn = (translateHelp ts level (P.T_ASSIGN::(dropUntilNewLine toReturn)))
 		| translateHelp (P.T_LBRACE::ts) level toReturn = (translateHelp ts (level+1) (addIndents (level+1) (P.T_LBRACE::toReturn)))
 		| translateHelp (P.T_SEMICOLON::ts) level toReturn = (translateHelp ts level (addIndents level (P.T_SEMICOLON::toReturn)))
-		| translateHelp (P.T_SYM t::P.T_LPAREN::ts) level toReturn = translateHelp ts level (P.T_SYM t::(P.T_LPAREN::(toReturn@(lasts (doubleList (isolateInputs ts) [] [])))))
+		| translateHelp (P.T_SYM t::P.T_LPAREN::ts) level toReturn = translateHelp (revIsolateInputs ts) level ((lasts (doubleList (isolateInputs ts) [] []))@(P.T_LPAREN::(P.T_SYM t::toReturn)))
 		| translateHelp (t::ts) level toReturn= (translateHelp ts level (t::toReturn))
 		| translateHelp [] level toReturn=(List.rev toReturn)
 
