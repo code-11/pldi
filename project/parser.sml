@@ -185,10 +185,10 @@ structure Parser =  struct
                  ("{",                    produceLBrace),
                  ("}",                    produceRBrace),
                  ("=",                    produceAssign),
-                 ("\\[",                    produceLBracket),
-                 ("\\]",                    produceRBracket),
-                 ("\\.",                    produceDot)]
-                 (*("\\"[^\\"]*\\"",   produceString)]*)
+                 ("\\[",                  produceLBracket),
+                 ("\\]",                  produceRBracket),
+                 ("\\.",                  produceDot),
+                 ("\\\"[^\\\"]*\\\"",     produceString)]
   end
                
                

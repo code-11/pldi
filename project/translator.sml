@@ -37,6 +37,7 @@ structure Translator =  struct
     | tokenToPyString P.T_FUNCSCOPE="def"
     | tokenToPyString P.T_STATIC=""
     | tokenToPyString P.T_INDENT="\t"
+    | tokenToPyString _ ="NO TRANSLATION"
 
 
 	(*takes in a list of tokens, returns a string*)
@@ -49,17 +50,25 @@ structure Translator =  struct
 		| dropUntilNewLineHelp (P.T_RPAREN::ts)= P.T_RPAREN::ts
 		| dropUntilNewLineHelp (P.T_INDENT::ts)=P.T_INDENT::ts
 		| dropUntilNewLineHelp (a::ts)=dropUntilNewLineHelp ts
-		(*If its empty something messed up*)
+		| dropUntilNewLineHelp [] = raise Match (*If its empty something messed up*)
 
 	fun dropUntilNewLine (t::ts)=t::(dropUntilNewLineHelp ts)
 		| dropUntilNewLine []=[]
 
+	(*First argument: token list to walk down
+	  Second argument: current sublist to add to - stuff between commas
+	  Third argument: total list of lists that is being built up*)
+	
+	fun lasts tss=
+		List.map (fn x=> List.hd x) tss
+
 	fun doubleList [] currList toReturn= List.rev (currList::toReturn)
-		| doubleList (T_COMMA::ts) currList toReturn= doubleList ts [] (currList::toReturn)
+		| doubleList (P.T_COMMA::ts) currList toReturn= doubleList ts [] (currList::toReturn)
 		| doubleList (t::ts) currList toReturn =doubleList ts (t::currList) toReturn
 
-	fun isolateInputs (T_RPAREN::ts)= []
+	fun isolateInputs (P.T_RPAREN::ts)= []
 		| isolateInputs (t::ts)=t::(isolateInputs ts) 
+		| isolateInputs _ =raise Match
 
 (*	fun dropUntilCommaHelp (P.T_LPAREN::ts) = P.T_LPAREN::ts
 		| dropUntilCommaHelp (P.T_COMMA::ts) = P.T_COMMA::ts
@@ -75,7 +84,7 @@ structure Translator =  struct
 	fun translateHelp (P.T_ASSIGN::ts) level toReturn = (translateHelp ts level (P.T_ASSIGN::(dropUntilNewLine toReturn)))
 		| translateHelp (P.T_LBRACE::ts) level toReturn = (translateHelp ts (level+1) (addIndents (level+1) (P.T_LBRACE::toReturn)))
 		| translateHelp (P.T_SEMICOLON::ts) level toReturn = (translateHelp ts level (addIndents level (P.T_SEMICOLON::toReturn)))
-(*		| translateHelp (P.SYM t::P.T_LPAREN::ts) level toReturn = *)
+		| translateHelp (P.T_SYM t::P.T_LPAREN::ts) level toReturn = translateHelp ts level (P.T_SYM t::(P.T_LPAREN::(toReturn@(lasts (doubleList (isolateInputs ts) [] [])))))
 		| translateHelp (t::ts) level toReturn= (translateHelp ts level (t::toReturn))
 		| translateHelp [] level toReturn=(List.rev toReturn)
 
