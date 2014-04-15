@@ -100,6 +100,8 @@ structure Translator =  struct
 			(translateHelp ts (level+1) (addIndents (level+1) (P.T_LBRACE::toReturn)))
 		| translateHelp (P.T_SEMICOLON::ts) level toReturn = 
 			(translateHelp ts level (addIndents level (P.T_SEMICOLON::toReturn)))
+		| translateHelp (P.T_RBRACE::ts) level toReturn =
+			translateHelp ts (level-1) (addIndents (level-1) (P.T_RBRACE::toReturn))
 		| translateHelp (P.T_SYM t::P.T_LPAREN::ts) level toReturn = 
 			translateHelp (revIsolateInputs ts) level ((lasts (doubleList 
 				(isolateInputs ts) [] []))@(P.T_LPAREN::(P.T_SYM t::toReturn)))
