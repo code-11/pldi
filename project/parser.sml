@@ -1,5 +1,5 @@
  
- (*   CODE FOR HOMEWORK 5
+ (* 
  *)
 
 
@@ -119,6 +119,7 @@ structure Parser =  struct
                    
   fun whitespace _ = NONE
                      
+  (*all of the keywords of Java*)
   fun produceSymbol "true" = SOME (T_TRUE)
     | produceSymbol "false" = SOME (T_FALSE)
     | produceSymbol "if" = SOME (T_IF)
