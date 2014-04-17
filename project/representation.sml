@@ -17,6 +17,7 @@ structure InternalRepresentation = struct
 			(*str1=return value*)
 			| Return of string
 			| Block of stmt list
+			| Comment of string
 	and scope = Private
 			| Public
 			| Protected
@@ -37,6 +38,7 @@ structure InternalRepresentation = struct
 		| 	strSt (While(v,block)) = $["While (",v,",",strSt block,")"]
 		|	strSt (Return(v)) = $["Return (",v,")"]
 		|	strSt (Block(stmts)) = $["Block [",$+ (map strSt stmts),"]"]
+		|	strSt (Comment(stuff)) = $["Comment (*",stuff,"*)"]
 	and strArg (str1,str2) = $[str1,",",str2]
 	and strArgs argsList= $["[",$+ (map strArg argsList),"]"]
 	and strSc (Private)="Private"
