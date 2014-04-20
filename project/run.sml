@@ -4,8 +4,17 @@ structure Run =struct
 	structure T= Translator
 	structure I=InternalRepresentation
 
+	fun genJava1 ()=
+		"public static void herp(double a,float b){return b;}"
+
+	fun genJava3 ()=
+		"String spam(int a){while(a){if(a){return a;}else{return b;}}}"
+
+	fun genJava2 ()=
+		"class HelloWorld{"^genJava1()^"}"
+
 	fun run () = 
-		let val tokenList= P.lexString("1+1") in
+		let val tokenList= P.lexString(genJava3()) in
 			((P.printTokens tokenList);
 			print (case (P.parse_stmt tokenList)
 				of NONE=>"\n"
