@@ -8,7 +8,7 @@ structure InternalRepresentation = struct
 			| Initial of scope*string*string*string
 			(*string=varname, str2=value*)
 			| Assign of string*string
-			| Call of string
+			| Call of string*(string list)
 			(*str1=ifValue*)
 			| If of string*stmt
 			(*str1=ifValue*)
@@ -18,6 +18,8 @@ structure InternalRepresentation = struct
 			| Return of string
 			| Block of stmt list
 			| Comment of string
+			(*str1=val1,str2=operator,str3=val2 *)
+			| Infix of string*string*string
 	and scope = Private
 			| Public
 			| Protected
@@ -32,15 +34,17 @@ structure InternalRepresentation = struct
   		|	strSt (MethDef (sc, retType,name,a,body))= $["MethDef (",strSc sc,",",retType,",",name,",",strArgs a,",",strSt body,")"]
   		|	strSt (Initial (sc,itype,varname,v)) = $["Initial (",strSc sc,",",itype,",",varname,",",v,")"]
   		|	strSt (Assign (varname,v)) = $["Assign (",varname,",",v,")"]
-		|	strSt (Call(v)) = $ ["Call (",v,")"]
+		|	strSt (Call(v,args)) = $ ["Call (",v,",", (strCallArgs args),")"]
 		| 	strSt (If (v,body)) = $["If (",v,",",strSt body,")"]
 		|	strSt (IfElse (v,trueBl,falseBl)) = $["IfElse(",v,",",strSt trueBl,",",strSt falseBl,")"]
 		| 	strSt (While(v,block)) = $["While (",v,",",strSt block,")"]
 		|	strSt (Return(v)) = $["Return (",v,")"]
 		|	strSt (Block(stmts)) = $["Block [",$+ (map strSt stmts),"]"]
 		|	strSt (Comment(stuff)) = $["Comment (*",stuff,"*)"]
-	and strArg (str1,str2) = $[str1,",",str2]
+		|	strSt (Infix(val1,operator,val2)) = $["Infix(",val1,",",operator,",",val2,")"]
+	and strArg (str1,str2) = $["(",str1,",",str2,")"]
 	and strArgs argsList= $["[",$+ (map strArg argsList),"]"]
+	and strCallArgs argsList = $["[",$+ argsList,"]"]
 	and strSc (Private)="Private"
 		|strSc (Public)="Public"
 		|strSc (Protected)="Proected"

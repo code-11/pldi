@@ -1,8 +1,7 @@
  
- (* 
+ (* NOTE- The parser is less restrictive then the actual java parser so far
+    Things like "if (a==b){String c="blah"}" are allowed. Note the lack of Semicolon.
  *)
-
-
 
 structure Parser =  struct
 
@@ -12,8 +11,8 @@ structure Parser =  struct
 
   structure R = RegExpFn (structure P = AwkSyntax structure E = DfaEngine)
 
-(*  structure I = InternalRepresentation
-*)                
+  structure I = InternalRepresentation
+                
   (* match a compiled regular expression against a list of characters *)
                 
   fun matchRE' re cs = let
@@ -76,7 +75,8 @@ structure Parser =  struct
                  | T_THIS
                  | T_NULL
                  | T_DOT
-                 | T_FUNCSCOPE
+                 | T_INFIX of string
+                 | T_FUNCSCOPE of string
                  | T_STATIC
                  | T_INDENT
 
@@ -112,9 +112,11 @@ structure Parser =  struct
     | stringOfToken T_THIS = "T_THIS"
     | stringOfToken T_NULL = "T_NULL"
     | stringOfToken T_DOT = "T_DOT"
-    | stringOfToken T_FUNCSCOPE ="T_FUNCSCOPE"
+    | stringOfToken (T_INFIX s) ="T_INFIX["^s^"]"
+    | stringOfToken (T_FUNCSCOPE s) ="T_FUNCSCOPE["^s^"]"
     | stringOfToken T_STATIC = "T_STATIC"
     | stringOfToken T_INDENT ="T_INDENT"
+    | stringOfToken _="TOKEN_NOT_RECOGNIZED"
 
                    
   fun whitespace _ = NONE
@@ -136,14 +138,9 @@ structure Parser =  struct
     | produceSymbol "super" = SOME (T_SUPER)
     | produceSymbol "this" = SOME (T_THIS)
     | produceSymbol "null" = SOME (T_NULL)
-    | produceSymbol "public" =SOME (T_FUNCSCOPE)
-    | produceSymbol "private" =SOME (T_FUNCSCOPE)
+    | produceSymbol "public" =SOME (T_FUNCSCOPE "public")
+    | produceSymbol "private" =SOME (T_FUNCSCOPE "private")
     | produceSymbol "static" = NONE
-(*    | produceSymbol "void" =NONE
-    | produceSymbol "String"=NONE
-    | produceSymbol "int"=NONE
-    | produceSymbol "float"=NONE
-    | produceSymbol "double"=NONE*)
     | produceSymbol text = SOME (T_SYM text)
 
   fun produceString text = SOME (T_STRING text)
@@ -152,7 +149,7 @@ structure Parser =  struct
                           of NONE => parseError "integer literal out of bounds"
                            | SOME i => SOME (T_INT i))
                         
-  fun produceEqual _ = SOME (T_EQUAL)
+  fun produceEqual _ = SOME (T_INFIX "==")
   fun produceLParen _ = SOME (T_LPAREN)
   fun produceRParen _ = SOME (T_RPAREN)
 
@@ -162,25 +159,35 @@ structure Parser =  struct
   fun produceLBracket _=SOME (T_LBRACKET)
   fun produceRBracket _=SOME (T_RBRACKET)
 
-  fun producePlus _ = SOME (T_PLUS)
-  fun produceTimes _ = SOME (T_TIMES)
+  fun produceInfix s = SOME (T_INFIX s)
+
+  fun producePlus _ = SOME (T_INFIX "+")
+  fun produceTimes _ = SOME (T_INFIX "*")
   fun produceComma _ = SOME (T_COMMA)
   fun produceAssign _ = SOME (T_ASSIGN)
-  fun produceDot _= SOME (T_DOT)
+  fun produceDot _= SOME (T_INFIX ".")
+
+  fun producePlusAssign _ = SOME(T_INFIX "+=")
+  fun produceMinusAssign _ =SOME(T_INFIX "-=")
+  fun produceTimesAssign _ =SOME(T_INFIX "*=")
+  fun produceDivAssign _ = SOME (T_INFIX "/=")
 
   fun produceSemiColon _ = SOME (T_SEMICOLON)
   
   val tokens = let 
     fun convert (re,f) = (R.compileString re, f)
   in
-    map convert [("( |\\n|\\t)+",         whitespace),
+    map convert [("( |\\n|\\t)+",           whitespace),
+                 ("\\+=",              producePlusAssign),
+                 ("\\-=",             produceMinusAssign),
+                 ("\\*=",             produceTimesAssign),
                  ("==",                   produceEqual),
-                 ("\\+",                  producePlus),
+                 ("\\+",                   producePlus),
             		 ("\\*",                  produceTimes),
             		 (",",                    produceComma),
             		 (";",                    produceSemiColon),
                  ("[a-zA-Z][a-zA-Z0-9]*", produceSymbol),
-                 ("~?[0-9]+",             produceInt),
+                 ("~?[0-9]+",             produceSymbol),
                  ("\\(",                  produceLParen),
                  ("\\)",                  produceRParen),
                  ("{",                    produceLBrace),
@@ -189,9 +196,23 @@ structure Parser =  struct
                  ("\\[",                  produceLBracket),
                  ("\\]",                  produceRBracket),
                  ("\\.",                  produceDot),
-                 ("\\\"[^\\\"]*\\\"",     produceString)]
+                 ("\\\"[^\\\"]*\\\"",     produceSymbol)]
   end
-               
+  
+  fun expect token (t::ts) = if t=token then SOME ts else NONE
+    | expect _ _ = NONE
+
+  fun expect_INT ((T_INT i)::ts) = SOME (i,ts)
+    | expect_INT _ = NONE
+
+  fun expect_SYM ((T_SYM s)::ts) = SOME (s,ts)
+    | expect_SYM _ = NONE
+
+  fun expect_INFIX ((T_INFIX s)::ts) = SOME (s,ts)
+    | expect_INFIX _ = NONE       
+
+  fun expect_SCOPE ((T_FUNCSCOPE s)::ts)= SOME (s,ts)
+    | expect_SCOPE _=NONE   
                
   fun getToken cs = let
     fun loop [] = parseError ("cannot tokenize "^(implode cs))
@@ -218,6 +239,211 @@ structure Parser =  struct
 
   fun printTokens [] = ()
      | printTokens (x::xs)=  ((printToken x); (printTokens xs))
-end  
+
+  fun choose [] ts = NONE
+    | choose (p::ps) ts = 
+        (case p ts
+    of NONE => choose ps ts
+     | s => s)
+
+  fun parse_stmt ts=let
+
+    fun parse_infix ts=
+      (case expect_SYM ts
+        of NONE=>NONE
+        | SOME (val1,ts)=>
+        (case expect_INFIX ts
+          of NONE=>NONE
+          | SOME (oprtr,ts)=>
+          (case expect_SYM ts
+            of NONE=>NONE
+            | SOME (val2,ts)=>SOME (I.Infix(val1,oprtr,val2),ts))))
+
+    fun parse_call ts=
+      (case expect_SYM ts
+        of NONE=>NONE
+        | SOME (name,ts)=>
+        (case expect T_LPAREN ts
+          of NONE=>NONE
+          | SOME ts=>
+          (case parse_inputs ts
+            of NONE=>NONE
+            | SOME (args,ts)=>
+            (case expect T_RPAREN ts
+              of NONE=>NONE
+              | SOME ts=>SOME (I.Call(name,args),ts)))))
+
+    fun parse_meth_def ts=
+      (case parse_scope ts
+        of NONE=>NONE
+        | SOME (sc,ts)=>
+        (case expect_SYM ts
+          of NONE=>NONE
+          | SOME (retype,ts)=>
+          (case expect_SYM ts
+            of NONE=>NONE
+            | SOME (name,ts)=>
+            (case expect T_LPAREN ts
+              of NONE=>NONE
+              | SOME ts=>
+              (case parse_meth_def_args ts
+                of NONE=>NONE 
+                | SOME (args,ts)=>
+                (case expect T_RPAREN ts
+                  of NONE=>NONE
+                  | SOME ts=>
+                  (case parse_stmt ts
+                    of NONE=>NONE
+                    | SOME (stmt,ts)=>SOME (I.MethDef(sc,retype,name,args,stmt),ts))))))))
+
+    fun parse_return ts=
+      (case expect T_RETURN ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case expect_SYM ts
+          of NONE=>NONE
+          | SOME (s,ts)=> SOME (I.Return(s),ts)))
+
+    fun parse_while ts=
+      (case expect T_WHILE ts
+        of NONE=> NONE
+        | SOME ts=>
+        (case expect T_LPAREN ts
+          of NONE=> NONE
+          | SOME ts=>
+          (case expect_SYM ts
+            of NONE=> NONE
+            | SOME (s,ts)=>
+            (case expect T_RPAREN ts
+              of NONE=> NONE
+              | SOME ts=>
+              (case parse_stmt ts 
+                of NONE=> NONE
+                | SOME (stmt,ts)=>SOME (I.While(s,stmt),ts))))))
+
+    fun parse_assign ts=
+      (case expect_SYM ts
+        of NONE=>NONE
+        |SOME (s1,ts)=>
+        (case expect T_ASSIGN ts
+          of NONE=>NONE
+          | SOME ts=>
+          (case expect_SYM ts
+            of NONE=>NONE
+            |SOME (s2,ts)=> SOME (I.Assign(s1,s2),ts))))
+
+    fun parse_if ts=
+      (case expect T_IF ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case expect T_LPAREN ts
+          of NONE=>NONE
+          |SOME ts=>
+          (case expect_SYM ts
+            of NONE=>NONE
+            | SOME (s,ts)=>
+            (case expect T_RPAREN ts
+              of NONE=>NONE
+              | SOME ts=>
+              (case parse_stmt ts
+                of NONE=>NONE 
+                | SOME (stmt,ts)=>
+                (case expect T_ELSE ts
+                  of NONE=> SOME (I.If(s,stmt),ts)
+                  | SOME ts=>
+                  (case parse_stmt ts
+                    of NONE=> NONE
+                    | SOME (stmt2,ts)=> SOME (I.IfElse(s,stmt,stmt2),ts))))))))
+
+    fun parse_block ts=
+      (case expect T_LBRACE ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case parse_stmt_list ts
+          of NONE=>NONE
+          | SOME (ss,ts)=>
+          (case expect T_RBRACE ts
+            of NONE=>NONE
+            | SOME ts=> SOME (I.Block(ss),ts))))
+
+    fun parse_initial ts=
+      (case parse_scope ts
+        of NONE=>NONE  
+        | SOME (sc,ts)=>
+          (case expect_SYM ts
+            of NONE=>NONE
+            | SOME (s1,ts)=>
+            (case expect_SYM ts
+              of NONE=>NONE
+              | SOME (s2,ts)=>
+              (case expect T_ASSIGN ts
+                of NONE=>NONE
+                | SOME ts=>
+                (case expect_SYM ts
+                  of NONE=>NONE
+                  | SOME (s3,ts)=> SOME (I.Initial(sc,s1,s2,s3),ts))))))
+    
+    fun parse_class_def ts=
+      (case parse_scope ts
+        of NONE=>NONE
+        | SOME (sc,ts)=>
+        (case expect T_CLASS ts
+          of NONE=>NONE
+          | SOME ts=>
+          (case expect_SYM ts
+            of NONE=>NONE
+            | SOME (s,ts)=>
+            (case parse_stmt ts
+              of NONE=>NONE
+              | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts))))) 
+  in 
+    choose [parse_infix,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_if,parse_class_def,parse_initial] ts
+  end
+    
+  and parse_scope ts=
+    (case expect_SCOPE ts 
+      of NONE=> SOME (I.Default,ts)
+      | SOME (s,ts)=>(case s 
+        of "public"=> SOME (I.Public,ts)
+        | "private"=> SOME (I.Private,ts)
+        | _=>NONE)) 
+
+  and parse_stmt_list ts=
+    (case parse_stmt ts
+      of NONE=>NONE
+      | SOME (stmt,ts)=>
+      (case expect T_SEMICOLON ts
+        of NONE=> SOME ([stmt],ts)
+        | SOME ts=>
+        (case parse_stmt_list ts
+          of NONE=>SOME ([stmt],ts)
+          | SOME (ss,ts)=> SOME (stmt::ss,ts))))
+
+  and parse_meth_def_args ts=
+    (case expect_SYM ts
+      of NONE=>SOME ([],ts)
+      | SOME (typ,ts)=>
+      (case expect_SYM ts
+        of NONE=>NONE
+        | SOME (name,ts)=>
+        (case expect T_COMMA ts
+          of NONE=> SOME ([(typ,name)],ts)
+          | SOME ts=>
+          (case parse_meth_def_args ts
+            of NONE=>NONE
+            | SOME (args,ts)=> SOME ((typ,name)::args,ts)))))
+  
+  and parse_inputs ts=
+    (case expect_SYM ts
+      of NONE=>SOME ([],ts)
+      | SOME (s,ts)=>
+      (case expect T_COMMA ts
+        of NONE=>SOME([s],ts)
+        | SOME ts=>
+        (case parse_inputs ts
+          of NONE=>NONE
+          | SOME (args,ts)=> SOME(s::args,ts))))
+
+  end
 
 
