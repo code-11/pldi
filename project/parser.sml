@@ -45,6 +45,7 @@ structure Parser =  struct
   datatype token = T_SYM of string 
                  | T_INT of int
                  | T_STRING of string
+                 | T_COMMENT of string
                  | T_TRUE
                  | T_FALSE
                  | T_IF
@@ -83,6 +84,7 @@ structure Parser =  struct
   fun stringOfToken (T_SYM s) = "T_SYM["^s^"]"
     | stringOfToken (T_INT i) = "T_INT["^(Int.toString i)^"]"
     | stringOfToken (T_STRING s) = "T_STRING["^s^"]"
+    | stringOfToken (T_COMMENT s)= "T_COMMENT["^s^"]"
     | stringOfToken T_TRUE = "T_TRUE"
     | stringOfToken T_FALSE = "T_FALSE"
     | stringOfToken T_IF  = "T_IF"
@@ -122,8 +124,8 @@ structure Parser =  struct
   fun whitespace _ = NONE
                      
   (*all of the keywords of Java*)
-  fun produceSymbol "true" = SOME (T_TRUE)
-    | produceSymbol "false" = SOME (T_FALSE)
+  fun produceSymbol "true" = SOME (T_SYM "true")
+    | produceSymbol "false" = SOME (T_SYM "false")
     | produceSymbol "if" = SOME (T_IF)
     | produceSymbol "then" = SOME (T_THEN)
     | produceSymbol "else" = SOME (T_ELSE)
@@ -144,6 +146,11 @@ structure Parser =  struct
     | produceSymbol text = SOME (T_SYM text)
 
   fun produceString text = SOME (T_STRING text)
+
+  fun produceComment text=
+    let val strList= String.explode text in
+      SOME (T_COMMENT (implode (List.rev (List.tl (List.tl (List.rev (List.tl (List.tl strList))))))))
+    end
                            
   fun produceInt text = (case Int.fromString text
                           of NONE => parseError "integer literal out of bounds"
@@ -163,6 +170,14 @@ structure Parser =  struct
 
   fun producePlus _ = SOME (T_INFIX "+")
   fun produceTimes _ = SOME (T_INFIX "*")
+  fun produceMinus _ =SOME (T_INFIX "-")
+  fun produceDiv _ =SOME (T_INFIX "/") 
+  fun produceLess _ =SOME (T_INFIX "<")
+  fun produceGreat _ = SOME (T_INFIX ">")
+  fun produceLessEq _=SOME (T_INFIX "<=")
+  fun produceGreatEq _ = SOME (T_INFIX ">=")
+  fun produceAnd _= SOME (T_INFIX "&&")
+  fun produceOr _= SOME (T_INFIX "||")
   fun produceComma _ = SOME (T_COMMA)
   fun produceAssign _ = SOME (T_ASSIGN)
   fun produceDot _= SOME (T_INFIX ".")
@@ -178,12 +193,21 @@ structure Parser =  struct
     fun convert (re,f) = (R.compileString re, f)
   in
     map convert [("( |\\n|\\t)+",           whitespace),
-                 ("\\+=",              producePlusAssign),
-                 ("\\-=",             produceMinusAssign),
-                 ("\\*=",             produceTimesAssign),
+                 ("\\/\\*[^\\*]*\\*\\/", produceComment),
+                 ("\\+=",            producePlusAssign),
+                 ("\\-=",           produceMinusAssign),
+                 ("\\*=",           produceTimesAssign),
                  ("==",                   produceEqual),
                  ("\\+",                   producePlus),
+                 ("\\-",                  produceMinus),
             		 ("\\*",                  produceTimes),
+                 ("\\/",                    produceDiv),
+                 ("<",                     produceLess),
+                 (">",                    produceGreat),
+                 ("<=",                  produceLessEq),
+                 (">=",                 produceGreatEq),
+                 ("&&",                     produceAnd),
+                 ("\\|\\|",                  produceOr),
             		 (",",                    produceComma),
             		 (";",                    produceSemiColon),
                  ("[a-zA-Z][a-zA-Z0-9]*", produceSymbol),
@@ -213,6 +237,9 @@ structure Parser =  struct
 
   fun expect_SCOPE ((T_FUNCSCOPE s)::ts)= SOME (s,ts)
     | expect_SCOPE _=NONE   
+
+  fun expect_COMMENT ((T_COMMENT s)::ts) = SOME (s,ts)
+    | expect_COMMENT _=NONE
                
   fun getToken cs = let
     fun loop [] = parseError ("cannot tokenize "^(implode cs))
@@ -247,6 +274,11 @@ structure Parser =  struct
      | s => s)
 
   fun parse_stmt ts=let
+
+    fun parse_comment ts=
+      (case expect_COMMENT ts
+        of NONE=>NONE
+        | SOME (text,ts)=> SOME (I.Comment(text),ts))
 
     fun parse_infix ts=
       (case expect_SYM ts
@@ -397,7 +429,7 @@ structure Parser =  struct
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts))))) 
   in 
-    choose [parse_infix,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_if,parse_class_def,parse_initial] ts
+    choose [parse_infix,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_if,parse_class_def,parse_initial,parse_comment] ts
   end
     
   and parse_scope ts=
