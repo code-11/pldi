@@ -409,7 +409,7 @@ structure Parser =  struct
               of NONE=>NONE
               | SOME (s2,ts)=>
               (case expect T_ASSIGN ts
-                of NONE=>NONE
+                of NONE=>SOME (I.SmInitial(sc,s1,s2),ts)
                 | SOME ts=>
                 (case expect_SYM ts
                   of NONE=>NONE

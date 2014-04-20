@@ -14,13 +14,13 @@ structure Run =struct
 		"class HelloWorld{"^genJava1()^"}"
 
 	fun genJava4 ()=
-		"true || false"
+		"{true || false; int a;}"
 
 	fun genJava5 ()=
 		"/* Blah Comment Blah */"
 
 	fun run () = 
-		let val tokenList= P.lexString(genJava5()) in
+		let val tokenList= P.lexString(genJava4()) in
 			((P.printTokens tokenList);
 			print (case (P.parse_stmt tokenList)
 				of NONE=>"\n"

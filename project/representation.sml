@@ -6,6 +6,8 @@ structure InternalRepresentation = struct
 			| MethDef of scope*string*string*(string*string) list*stmt
 			(*string1=type string2=varname str3=value*)
 			| Initial of scope*string*string*string
+			(*string1=type str2=name*)
+			| SmInitial of scope*string*string
 			(*string=varname, str2=value*)
 			| Assign of string*string
 			| Call of string*(string list)
@@ -33,6 +35,7 @@ structure InternalRepresentation = struct
   	fun strSt (ClassDef (sc,name,body))= $ ["ClassDef (",strSc sc,",",name,",",strSt body,")"]
   		|	strSt (MethDef (sc, retType,name,a,body))= $["MethDef (",strSc sc,",",retType,",",name,",",strArgs a,",",strSt body,")"]
   		|	strSt (Initial (sc,itype,varname,v)) = $["Initial (",strSc sc,",",itype,",",varname,",",v,")"]
+  		| 	strSt (SmInitial (sc,itype,varname)) = $["SmInitial (",strSc sc,",",itype,",",varname,")"]
   		|	strSt (Assign (varname,v)) = $["Assign (",varname,",",v,")"]
 		|	strSt (Call(v,args)) = $ ["Call (",v,",", (strCallArgs args),")"]
 		| 	strSt (If (v,body)) = $["If (",v,",",strSt body,")"]
