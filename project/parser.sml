@@ -281,13 +281,13 @@ structure Parser =  struct
         | SOME (text,ts)=> SOME (I.Comment(text),ts))
 
     fun parse_infix ts=
-      (case expect_SYM ts
+      (case parse_stmt ts
         of NONE=>NONE
         | SOME (val1,ts)=>
         (case expect_INFIX ts
           of NONE=>NONE
           | SOME (oprtr,ts)=>
-          (case expect_SYM ts
+          (case parse_stmt ts
             of NONE=>NONE
             | SOME (val2,ts)=>SOME (I.Infix(val1,oprtr,val2),ts))))
 
@@ -332,7 +332,7 @@ structure Parser =  struct
       (case expect T_RETURN ts
         of NONE=>NONE
         | SOME ts=>
-        (case expect_SYM ts
+        (case parse_stmt ts
           of NONE=>NONE
           | SOME (s,ts)=> SOME (I.Return(s),ts)))
 
@@ -343,7 +343,7 @@ structure Parser =  struct
         (case expect T_LPAREN ts
           of NONE=> NONE
           | SOME ts=>
-          (case expect_SYM ts
+          (case parse_stmt ts
             of NONE=> NONE
             | SOME (s,ts)=>
             (case expect T_RPAREN ts
@@ -371,7 +371,7 @@ structure Parser =  struct
         (case expect T_LPAREN ts
           of NONE=>NONE
           |SOME ts=>
-          (case expect_SYM ts
+          (case parse_stmt ts
             of NONE=>NONE
             | SOME (s,ts)=>
             (case expect T_RPAREN ts
@@ -411,7 +411,7 @@ structure Parser =  struct
               (case expect T_ASSIGN ts
                 of NONE=>SOME (I.SmInitial(sc,s1,s2),ts)
                 | SOME ts=>
-                (case expect_SYM ts
+                (case parse_stmt ts
                   of NONE=>NONE
                   | SOME (s3,ts)=> SOME (I.Initial(sc,s1,s2,s3),ts))))))
     
