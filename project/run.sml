@@ -20,11 +20,12 @@ structure Run =struct
 		"/* Blah Comment Blah */"
 
 	fun run () = 
-		let val tokenList= P.lexString(genJava4()) in
+		let val tokenList= P.lexString(genJava5()) in
 			((P.printTokens tokenList);
 			print (case (P.parse_stmt tokenList)
-				of NONE=>"\n"
-				| SOME (stmt,ts)=> (I.strSt stmt)))
+				of NONE=>"\n."
+				| SOME (stmt,ts)=> (I.strSt stmt)^"\n."))
+			(*print (I.strSt (I.Block([I.Infix(I.Var("true"),"||",I.Var("false")),I.SmInitial(I.Default,"int","a")]))))*)
 		end
 			(*print (T.stringify (T.translate tokenList))*)
 end
