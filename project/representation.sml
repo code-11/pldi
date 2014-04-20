@@ -4,24 +4,28 @@ structure InternalRepresentation = struct
 			 ClassDef of scope*string*stmt
 			(*string1=return type, string2=name, tuple list is argument list (type,varname), stmt is meth def body*)
 			| MethDef of scope*string*string*(string*string) list*stmt
-			(*string1=type string2=varname str3=value*)
-			| Initial of scope*string*string*string
+			(*string1=type string2=varname stmt=value*)
+			| Initial of scope*string*string*stmt
 			(*string1=type str2=name*)
 			| SmInitial of scope*string*string
-			(*string=varname, str2=value*)
-			| Assign of string*string
-			| Call of string*(string list)
-			(*str1=ifValue*)
-			| If of string*stmt
-			(*str1=ifValue*)
-			| IfElse of string*stmt*stmt
-			| While of string*stmt
-			(*str1=return value*)
-			| Return of string
+			(*string=varname, stmt2=value*)
+			| Assign of string*stmt
+			(*string=methname, stmt list=args*)
+			| Call of string*(stmt list)
+			(*stmt1=ifValue*)
+			| If of stmt*stmt
+			(*stmt1=ifValue, stmt2=thenValue, stmt3=elseValue*)
+			| IfElse of stmt*stmt*stmt
+			| While of stmt*stmt
+			(*stmt=return value*)
+			| Return of stmt
 			| Block of stmt list
 			| Comment of string
-			(*str1=val1,str2=operator,str3=val2 *)
-			| Infix of string*string*string
+			(*stmt1=val1,str=operator,stmt=val2 *)
+			(*sides need to be statements*)
+			| Infix of stmt*string*stmt
+			(*a single variable*)
+			| Var of string
 	and scope = Private
 			| Public
 			| Protected
@@ -50,6 +54,6 @@ structure InternalRepresentation = struct
 	and strCallArgs argsList = $["[",$+ argsList,"]"]
 	and strSc (Private)="Private"
 		|strSc (Public)="Public"
-		|strSc (Protected)="Proected"
+		|strSc (Protected)="Protected"
 		|strSc (Default)="Default"
 end
