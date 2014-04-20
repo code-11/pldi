@@ -360,7 +360,7 @@ structure Parser =  struct
         (case expect T_ASSIGN ts
           of NONE=>NONE
           | SOME ts=>
-          (case expect_SYM ts
+          (case parse_stmt ts
             of NONE=>NONE
             |SOME (s2,ts)=> SOME (I.Assign(s1,s2),ts))))
 
@@ -466,7 +466,7 @@ structure Parser =  struct
             | SOME (args,ts)=> SOME ((typ,name)::args,ts)))))
   
   and parse_inputs ts=
-    (case expect_SYM ts
+    (case parse_stmt ts
       of NONE=>SOME ([],ts)
       | SOME (s,ts)=>
       (case expect T_COMMA ts
