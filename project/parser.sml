@@ -278,7 +278,7 @@ structure Parser =  struct
     fun parse_var ts=
       (case expect_SYM ts
         of NONE=>NONE
-        | SOME (s,ts)=>((print "In var"); SOME (I.Var(s),ts)))
+        | SOME (s,ts)=>(SOME (I.Var(s),ts)))
 
     fun parse_comment ts=
       (case expect_COMMENT ts
@@ -286,15 +286,21 @@ structure Parser =  struct
         | SOME (text,ts)=>SOME (I.Comment(text),ts))
 
     fun parse_infix ts=
-      (case parse_stmt ts
-        of NONE=>NONE
-        | SOME (val1,ts)=>
-        (case expect_INFIX ts
-          of NONE=>NONE
-          | SOME (oprtr,ts)=>
-          (case parse_stmt ts
+      (case expect T_LPAREN ts
+        of NONE => NONE
+         | SOME ts => 
+         (case parse_stmt ts
             of NONE=>NONE
-            | SOME (val2,ts)=>SOME (I.Infix(val1,oprtr,val2),ts))))
+             | SOME (val1,ts)=>
+             (case expect_INFIX ts
+               of NONE=>NONE
+                | SOME (oprtr,ts)=>
+                (case parse_stmt ts
+                  of NONE=>NONE
+                  | SOME (val2,ts)=>
+                  (case expect T_RPAREN ts
+                    of NONE => NONE
+                     | SOME ts => SOME (I.Infix(val1,oprtr,val2),ts))))))
 
     fun parse_call ts=
       (case expect_SYM ts
@@ -333,7 +339,7 @@ structure Parser =  struct
                     of NONE=>NONE
                     | SOME (stmt,ts)=>SOME (I.MethDef(sc,retype,name,args,stmt),ts))))))))
 
-(*    fun parse_return ts=
+   fun parse_return ts=
       (case expect T_RETURN ts
         of NONE=>NONE
         | SOME ts=>
@@ -356,9 +362,9 @@ structure Parser =  struct
               | SOME ts=>
               (case parse_stmt ts 
                 of NONE=> NONE
-                | SOME (stmt,ts)=>SOME (I.While(s,stmt),ts))))))*)
+                | SOME (stmt,ts)=>SOME (I.While(s,stmt),ts))))))
 
-(*    fun parse_assign ts=
+    fun parse_assign ts=
       (case expect_SYM ts
         of NONE=>NONE
         |SOME (s1,ts)=>
@@ -432,9 +438,9 @@ structure Parser =  struct
             | SOME (s,ts)=>
             (case parse_stmt ts
               of NONE=>NONE
-              | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts))))) *)
+              | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_var,parse_infix,parse_call,parse_meth_def,(*parse_return,parse_while,parse_assign,parse_block,parse_if,parse_class_def,parse_initial,*)parse_comment] ts
+    choose [parse_var,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_infix,parse_class_def,parse_initial,parse_comment] ts
   end
     
   and parse_scope ts=
