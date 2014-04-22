@@ -26,6 +26,7 @@ structure InternalRepresentation = struct
 			| Infix of stmt*string*stmt
 			(*a single variable*)
 			| Var of string
+			| Paren of stmt
 	and scope = Private
 			| Public
 			| Protected
@@ -50,6 +51,7 @@ structure InternalRepresentation = struct
 		|	strSt (Comment(stuff)) = $["Comment (",stuff,")"]
 		|	strSt (Infix(val1,operator,val2)) = $["Infix(",strSt val1,",",operator,",",strSt val2,")"]
 		| 	strSt (Var (s)) = $["Var (",s,")"]
+		| 	strSt (Paren(stmt)) = $["Paren(",strSt stmt,")"]
 	and strArg (str1,str2) = $["(",str1,",",str2,")"]
 	and strArgs argsList= $["[",$+ (map strArg argsList),"]"]
 	and strCallArgs argsList = $["[",$+ (map strSt argsList),"]"]

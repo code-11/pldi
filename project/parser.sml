@@ -275,6 +275,17 @@ structure Parser =  struct
 
   fun parse_stmt ts=let
 
+    fun parse_paren ts=
+      (case expect T_LPAREN ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case parse_stmt ts
+          of NONE=>NONE
+          | SOME (stmt,ts)=>
+          (case expect T_RPAREN ts
+            of NONE=>NONE
+            | SOME ts=> SOME (I.Paren(stmt),ts))))
+
     fun parse_var ts=
       (case expect_SYM ts
         of NONE=>NONE
@@ -440,7 +451,7 @@ structure Parser =  struct
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_var,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_infix,parse_class_def,parse_initial,parse_comment] ts
+    choose [parse_paren,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
   end
     
   and parse_scope ts=
