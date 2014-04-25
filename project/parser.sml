@@ -210,7 +210,7 @@ structure Parser =  struct
                  ("\\|\\|",                  produceOr),
             		 (",",                    produceComma),
             		 (";",                    produceSemiColon),
-                 ("[a-zA-Z][a-zA-Z0-9]*", produceSymbol),
+                 ("[a-zA-Z][a-zA-Z0-9\\.]*", produceSymbol),
                  ("~?[0-9]+",             produceSymbol),
                  ("\\(",                  produceLParen),
                  ("\\)",                  produceRParen),
@@ -370,7 +370,31 @@ structure Parser =  struct
           of NONE=>NONE
           | SOME (retype,ts)=>
           (case expect_SYM ts
-            of NONE=>NONE
+            of NONE=>
+
+
+              (case expect T_LBRACKET ts
+                of NONE=>NONE
+                | SOME ts=>
+                (case expect T_RBRACKET ts
+                  of NONE=>NONE
+                  | SOME ts=> 
+                  (case expect_SYM ts
+                    of NONE=>NONE
+                    | SOME (name,ts)=>
+                    (case expect T_LPAREN ts
+                      of NONE=>NONE
+                      | SOME ts=>
+                      (case parse_meth_def_args ts
+                        of NONE=>NONE 
+                        | SOME (args,ts)=>
+                        (case expect T_RPAREN ts
+                          of NONE=>NONE
+                          | SOME ts=>
+                          (case parse_stmt ts
+                            of NONE=>NONE
+                            | SOME (stmt,ts)=>SOME (I.MethDef(sc,retype^"[]",name,args,stmt),ts))))))))
+
             | SOME (name,ts)=>
             (case expect T_LPAREN ts
               of NONE=>NONE
