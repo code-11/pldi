@@ -273,7 +273,61 @@ structure Parser =  struct
     of NONE => choose ps ts
      | s => s)
 
-  fun parse_stmt ts=let
+
+  fun parse_expr ts=let 
+
+    fun parse_eparen ts=
+      (case expect T_LPAREN ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case parse_stmt ts
+          of NONE=>NONE
+          | SOME (stmt,ts)=>
+          (case expect T_RPAREN ts
+            of NONE=>NONE
+            | SOME ts=> SOME (I.EParen(stmt),ts))))
+
+    fun parse_evar ts=
+      (case expect_SYM ts
+        of NONE=>NONE
+        | SOME (s,ts)=>(SOME (I.EVar(s),ts)))
+
+    fun parse_ecall ts=
+      (case expect_SYM ts
+        of NONE=>NONE
+        | SOME (name,ts)=>
+        (case expect T_LPAREN ts
+          of NONE=>NONE
+          | SOME ts=>
+          (case parse_inputs ts
+            of NONE=>NONE
+            | SOME (args,ts)=>
+            (case expect T_RPAREN ts
+              of NONE=>NONE
+              | SOME ts=>SOME (I.ECall(name,args),ts)))))
+
+
+    in     choose [parse_eparen,parse_ecall,parse_evar] ts
+  end
+
+  and parse_stmt ts=let
+
+    fun parse_call ts=
+      (case expect_SYM ts
+        of NONE=>NONE
+        | SOME (name,ts)=>
+        (case expect T_LPAREN ts
+          of NONE=>NONE
+          | SOME ts=>
+          (case parse_inputs ts
+            of NONE=>NONE
+            | SOME (args,ts)=>
+            (case expect T_RPAREN ts
+              of NONE=>NONE
+              | SOME ts=>
+              (case expect T_SEMICOLON ts
+                of NONE=>NONE
+                | SOME ts=> SOME (I.Call(name,args),ts))))))
 
     fun parse_paren ts=
       (case expect T_LPAREN ts
@@ -297,10 +351,7 @@ structure Parser =  struct
         | SOME (text,ts)=>SOME (I.Comment(text),ts))
 
     fun parse_infix ts=
-      (case expect T_LPAREN ts
-        of NONE => NONE
-         | SOME ts => 
-         (case parse_stmt ts
+         (case parse_expr ts
             of NONE=>NONE
              | SOME (val1,ts)=>
              (case expect_INFIX ts
@@ -308,27 +359,8 @@ structure Parser =  struct
                 | SOME (oprtr,ts)=>
                 (case parse_stmt ts
                   of NONE=>NONE
-                  | SOME (val2,ts)=>
-                  (case expect T_RPAREN ts
-                    of NONE => NONE
-                     | SOME ts => SOME (I.Infix(val1,oprtr,val2),ts))))))
+                  | SOME (val2,ts)=>SOME (I.Infix(val1,oprtr,val2),ts))))
 
-    fun parse_call ts=
-      (case expect_SYM ts
-        of NONE=>NONE
-        | SOME (name,ts)=>
-        (case expect T_LPAREN ts
-          of NONE=>NONE
-          | SOME ts=>
-          (case parse_inputs ts
-            of NONE=>NONE
-            | SOME (args,ts)=>
-            (case expect T_RPAREN ts
-              of NONE=>NONE
-              | SOME ts=>
-                (case expect T_SEMICOLON ts
-                  of NONE=>SOME (I.Call(name,args),ts)
-                  | SOME ts=> SOME (I.Call(name,args),ts))))))
 
     fun parse_meth_def ts=
       (case parse_scope ts

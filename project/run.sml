@@ -32,7 +32,7 @@ structure Run =struct
 		"thisIsAStmt();"
 
 	fun testCallAsValue ()=
-		"(thisIsAVal()+1)"
+		"thisIsAVal()+1+1"
 
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"

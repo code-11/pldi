@@ -3,19 +3,19 @@ structure InternalRepresentation = struct
 	(*things that can return a value*)
 	datatype expr =
 		(*string=method name, stmtlist = arguments*)
-		| Call of string*(stmt list)
+		ECall of string*(stmt list)
 		(*a single variable*)
-		| Var of string
-		| Paren of stmt
+		| EVar of string
+		| EParen of stmt
 
 	(*things that can't return a value*)
-	datatype stmt = 
+	and stmt = 
 			(*string=name, stmt is class def body*)
 			 ClassDef of scope*string*stmt
 			(*string1=return type, string2=name, tuple list is argument list (type,varname), stmt is meth def body*)
 			| MethDef of scope*string*string*(string*string) list*stmt
 			(*string1=type string2=varname stmt=value*)
-			| Initial of scope*string*string*expr
+			| Initial of scope*string*string*stmt
 			(*string1=type str2=name*)
 			| SmInitial of scope*string*string
 			(*string=varname, stmt2=value*)
@@ -23,16 +23,18 @@ structure InternalRepresentation = struct
 			(*string=methname, stmt list=args*)
 			| Call of string*(stmt list)
 			(*stmt1=ifValue*)
-			| If of expr*stmt
-			(*expr=ifValue, stmt1=thenValue, stmt2=elseValue*)
-			| IfElse of expr*stmt*stmt
-			| While of expr*stmt
-			(*expr=return value*)
-			| Return of expr
+			| If of stmt*stmt
+			(*stmt=ifValue, stmt1=thenValue, stmt2=elseValue*)
+			| IfElse of stmt*stmt*stmt
+			| While of stmt*stmt
+			(*stmt=return value*)
+			| Return of stmt
 			| Block of stmt list
 			| Comment of string
 			(*stmt1=val1,str=operator,stmt=val2 *)
-			| Infix of expr*string*stmt
+			| Infix of expr*string*stmt		(*a single variable*)
+			| Var of string
+			| Paren of stmt
 
 	and scope = Private
 			| Public
@@ -56,9 +58,13 @@ structure InternalRepresentation = struct
 		|	strSt (Return(v)) = $["Return (",strSt v,")"]
 		|	strSt (Block(stmts)) = $["Block [",$+ (map strSt stmts),"]"]
 		|	strSt (Comment(stuff)) = $["Comment (",stuff,")"]
-		|	strSt (Infix(val1,operator,val2)) = $["Infix(",strSt val1,",",operator,",",strSt val2,")"]
+		|	strSt (Infix(val1,operator,val2)) = $["Infix(",strExpr val1,",",operator,",",strSt val2,")"]
 		| 	strSt (Var (s)) = $["Var (",s,")"]
 		| 	strSt (Paren(stmt)) = $["Paren(",strSt stmt,")"]
+	and strExpr (ECall(v,args)) = $ ["ECall (",v,",", (strCallArgs args),")"]
+		| strExpr (EVar (s)) = $["EVar (",s,")"]
+		| strExpr (EParen(stmt)) = $["Paren(",strSt stmt,")"]
+
 	and strArg (str1,str2) = $["(",str1,",",str2,")"]
 	and strArgs argsList= $["[",$+ (map strArg argsList),"]"]
 	and strCallArgs argsList = $["[",$+ (map strSt argsList),"]"]
