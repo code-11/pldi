@@ -325,7 +325,10 @@ structure Parser =  struct
             | SOME (args,ts)=>
             (case expect T_RPAREN ts
               of NONE=>NONE
-              | SOME ts=>SOME (I.Call(name,args),ts)))))
+              | SOME ts=>
+                (case expect T_SEMICOLON ts
+                  of NONE=>SOME (I.Call(name,args),ts)
+                  | SOME ts=> SOME (I.Call(name,args),ts))))))
 
     fun parse_meth_def ts=
       (case parse_scope ts
@@ -356,7 +359,10 @@ structure Parser =  struct
         | SOME ts=>
         (case parse_stmt ts
           of NONE=>NONE
-          | SOME (s,ts)=> SOME (I.Return(s),ts)))
+          | SOME (s,ts)=> 
+            (case expect T_SEMICOLON ts
+              of NONE=>NONE
+              |SOME ts=>SOME (I.Return(s),ts))))
 
     fun parse_while ts=
       (case expect T_WHILE ts
@@ -384,7 +390,10 @@ structure Parser =  struct
           | SOME ts=>
           (case parse_stmt ts
             of NONE=>NONE
-            |SOME (s2,ts)=> SOME (I.Assign(s1,s2),ts))))
+            |SOME (s2,ts)=> 
+              (case expect T_SEMICOLON ts
+                of NONE=>NONE
+                | SOME ts=> SOME(I.Assign(s1,s2),ts)))))
 
     fun parse_if ts=
       (case expect T_IF ts
@@ -414,7 +423,10 @@ structure Parser =  struct
         of NONE=>NONE
         | SOME ts=>
         (case parse_stmt_list ts
-          of NONE=>NONE
+          of NONE=>
+            (case expect T_RBRACE ts
+              of NONE=>NONE
+              | SOME ts=> SOME (I.Block([]),ts)) 
           | SOME (ss,ts)=>
           (case expect T_RBRACE ts
             of NONE=>NONE
@@ -431,11 +443,17 @@ structure Parser =  struct
               of NONE=>NONE
               | SOME (s2,ts)=>
               (case expect T_ASSIGN ts
-                of NONE=>SOME (I.SmInitial(sc,s1,s2),ts)
+                of NONE=>
+                  (case expect T_SEMICOLON ts
+                    of NONE=>NONE
+                    | SOME ts=> SOME (I.SmInitial(sc,s1,s2),ts))
                 | SOME ts=>
                 (case parse_stmt ts
                   of NONE=>NONE
-                  | SOME (s3,ts)=> SOME (I.Initial(sc,s1,s2,s3),ts))))))
+                  | SOME (s3,ts)=> 
+                  (case expect T_SEMICOLON ts
+                    of NONE=>NONE
+                    | SOME ts=> SOME (I.Initial(sc,s1,s2,s3),ts)))))))
     
     fun parse_class_def ts=
       (case parse_scope ts
@@ -466,12 +484,9 @@ structure Parser =  struct
     (case parse_stmt ts
       of NONE=>NONE
       | SOME (stmt,ts)=>
-      (case expect T_SEMICOLON ts
-        of NONE=> SOME ([stmt],ts)
-        | SOME ts=>
         (case parse_stmt_list ts
           of NONE=>SOME ([stmt],ts)
-          | SOME (ss,ts)=> SOME (stmt::ss,ts))))
+          | SOME (ss,ts)=> SOME (stmt::ss,ts)))
 
   and parse_meth_def_args ts=
     (case expect_SYM ts

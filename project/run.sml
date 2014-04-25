@@ -22,17 +22,34 @@ structure Run =struct
 	fun genJava6 ()=
 		"int a=(1+1);"
 
-	fun genJava7 ()=
+	fun testParen ()=
 		"int b=((1+1));"
 
+	fun testBlock ()=
+		"{{}{}while((a==1)){a=1;}{}{}}"
+
+	fun testCallAsStmt ()=
+		"thisIsAStmt();"
+
+	fun testCallAsValue ()=
+		"(thisIsAVal()+1)"
+
+	fun genLine ()=
+		print "\n---------------------------------------------------\n"
+
 	fun test()=
-		(run genJava1;
+		(genLine();
+		run genJava1;
 		run genJava2;
 		run genJava3;
 		run genJava4;
 		run genJava5;
 		run genJava6;
-		run genJava7)
+		run testParen;
+		run testBlock;
+		run testCallAsStmt;
+		run testCallAsValue;
+		genLine())
 	and run test = 
 		let val tokenList= P.lexString(test()) in
 			((P.printTokens tokenList);
