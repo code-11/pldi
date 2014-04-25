@@ -1,11 +1,21 @@
 structure InternalRepresentation = struct
+
+	(*things that can return a value*)
+	datatype expr =
+		(*string=method name, stmtlist = arguments*)
+		| Call of string*(stmt list)
+		(*a single variable*)
+		| Var of string
+		| Paren of stmt
+
+	(*things that can't return a value*)
 	datatype stmt = 
 			(*string=name, stmt is class def body*)
 			 ClassDef of scope*string*stmt
 			(*string1=return type, string2=name, tuple list is argument list (type,varname), stmt is meth def body*)
 			| MethDef of scope*string*string*(string*string) list*stmt
 			(*string1=type string2=varname stmt=value*)
-			| Initial of scope*string*string*stmt
+			| Initial of scope*string*string*expr
 			(*string1=type str2=name*)
 			| SmInitial of scope*string*string
 			(*string=varname, stmt2=value*)
@@ -13,20 +23,17 @@ structure InternalRepresentation = struct
 			(*string=methname, stmt list=args*)
 			| Call of string*(stmt list)
 			(*stmt1=ifValue*)
-			| If of stmt*stmt
-			(*stmt1=ifValue, stmt2=thenValue, stmt3=elseValue*)
-			| IfElse of stmt*stmt*stmt
-			| While of stmt*stmt
-			(*stmt=return value*)
-			| Return of stmt
+			| If of expr*stmt
+			(*expr=ifValue, stmt1=thenValue, stmt2=elseValue*)
+			| IfElse of expr*stmt*stmt
+			| While of expr*stmt
+			(*expr=return value*)
+			| Return of expr
 			| Block of stmt list
 			| Comment of string
 			(*stmt1=val1,str=operator,stmt=val2 *)
-			(*sides need to be statements*)
-			| Infix of stmt*string*stmt
-			(*a single variable*)
-			| Var of string
-			| Paren of stmt
+			| Infix of expr*string*stmt
+
 	and scope = Private
 			| Public
 			| Protected
