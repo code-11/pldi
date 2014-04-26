@@ -210,7 +210,7 @@ structure Parser =  struct
                  ("\\|\\|",                  produceOr),
             		 (",",                    produceComma),
             		 (";",                    produceSemiColon),
-                 ("[a-zA-Z][a-zA-Z0-9\\.]*", produceSymbol),
+                 ("[a-zA-Z][\\[\\]a-zA-Z0-9\\.]*", produceSymbol),
                  ("~?[0-9]+",             produceSymbol),
                  ("\\(",                  produceLParen),
                  ("\\)",                  produceRParen),
@@ -381,29 +381,8 @@ fun find_array s ts =
           of NONE=>NONE
           | SOME (retype,ts)=>
           (case expect_SYM ts
-            of NONE=>
-
-            (*this is the part that looks for an array*)
-              (case find_array retype ts
-                of NONE => NONE
-                 | SOME (type2, ts) =>
-                  (case expect_SYM ts
-                    of NONE=>NONE
-                    | SOME (name,ts)=>
-                    (case expect T_LPAREN ts
-                      of NONE=>NONE
-                      | SOME ts=>
-                      (case parse_meth_def_args ts
-                        of NONE=>NONE 
-                        | SOME (args,ts)=>
-                        (case expect T_RPAREN ts
-                          of NONE=>NONE
-                          | SOME ts=>
-                          (case parse_stmt ts
-                            of NONE=>NONE
-                            | SOME (stmt,ts)=>SOME (I.MethDef(sc,type2,name,args,stmt),ts)))))))
-
-            | SOME (name,ts)=>
+            of NONE=>NONE
+             | SOME (name, ts) =>
             (case expect T_LPAREN ts
               of NONE=>NONE
               | SOME ts=>
@@ -503,25 +482,6 @@ fun find_array s ts =
           (case expect_SYM ts
             of NONE=>NONE
             | SOME (s1,ts)=>
-            (*check for array*)
-              (case find_array s1 ts
-              	of NONE =>
-              	(case expect_SYM ts
-              	  of NONE=>NONE
-              	   | SOME (s2,ts)=>
-              		(case expect T_ASSIGN ts
-                  	  of NONE=>
-                  	  (case expect T_SEMICOLON ts
-                    	of NONE=>NONE
-                    	 | SOME ts=> SOME (I.SmInitial(sc,s1,s2),ts))
-                	  | SOME ts=>
-                		(case parse_stmt ts
-                  		  of NONE=>NONE
-                  		   | SOME (s3,ts)=> 
-                  			(case expect T_SEMICOLON ts
-                    		  of NONE=>NONE
-                    		   | SOME ts=> SOME (I.Initial(sc,s1,s2,s3),ts)))))
-              | SOME (s1, ts) => 
             (case expect_SYM ts
               of NONE=>NONE
               | SOME (s2,ts)=>
@@ -536,7 +496,7 @@ fun find_array s ts =
                   | SOME (s3,ts)=> 
                   (case expect T_SEMICOLON ts
                     of NONE=>NONE
-                    | SOME ts=> SOME (I.Initial(sc,s1,s2,s3),ts))))))))
+                    | SOME ts=> SOME (I.Initial(sc,s1,s2,s3),ts)))))))
     
     fun parse_class_def ts=
       (case parse_scope ts
@@ -575,19 +535,6 @@ fun find_array s ts =
     (case expect_SYM ts
       of NONE=>SOME ([],ts)
       | SOME (typ,ts)=>
-      (*check for array*)
-      (case find_array typ ts 
-      	of NONE =>
-      	(case expect_SYM ts
-          of NONE=>NONE
-           | SOME (name,ts)=>
-        	(case expect T_COMMA ts
-          	  of NONE=> SOME ([(typ,name)],ts)
-          	   | SOME ts=>
-          		(case parse_meth_def_args ts
-            	  of NONE=>NONE
-            	   | SOME (args,ts)=> SOME ((typ,name)::args,ts))))
-         | SOME (typ, ts) =>
          (case expect_SYM ts
         	of NONE=>NONE
         	 | SOME (name,ts)=>
@@ -596,7 +543,7 @@ fun find_array s ts =
           		| SOME ts=>
           		(case parse_meth_def_args ts
             	  of NONE=>NONE
-            	  | SOME (args,ts)=> SOME ((typ,name)::args,ts))))))
+            	  | SOME (args,ts)=> SOME ((typ,name)::args,ts)))))
   
   and parse_inputs ts=
     (case parse_stmt ts
