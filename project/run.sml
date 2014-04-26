@@ -20,7 +20,7 @@ structure Run =struct
 		"/* Blah Comment Blah */"
 
 	fun genJava6 ()=
-		"int a=(1+1);"
+		"int[][] a=(1+1);"
 
 	fun testParen ()=
 		"int b=((1+1));"

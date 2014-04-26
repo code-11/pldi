@@ -273,6 +273,17 @@ structure Parser =  struct
     of NONE => choose ps ts
      | s => s)
 
+(*find the array*)
+(*takes a string and a token list*)
+(*Returns the string with [] appended to it for each array it finds*)
+(*If there's an unmatched LBRACKET< it fails.*)
+fun find_array s ts = 
+	(case expect T_LBRACKET ts
+		of NONE => SOME (s,ts)
+		 | SOME ts =>
+		 (case expect T_RBRACKET ts
+		 	of NONE => NONE
+		 	 | SOME ts => find_array (s^"[]") ts))
 
   fun parse_expr ts=let 
 
@@ -372,13 +383,10 @@ structure Parser =  struct
           (case expect_SYM ts
             of NONE=>
 
-
-              (case expect T_LBRACKET ts
-                of NONE=>NONE
-                | SOME ts=>
-                (case expect T_RBRACKET ts
-                  of NONE=>NONE
-                  | SOME ts=> 
+            (*this is the part that looks for an array*)
+              (case find_array retype ts
+                of NONE => NONE
+                 | SOME (type2, ts) =>
                   (case expect_SYM ts
                     of NONE=>NONE
                     | SOME (name,ts)=>
@@ -393,7 +401,7 @@ structure Parser =  struct
                           | SOME ts=>
                           (case parse_stmt ts
                             of NONE=>NONE
-                            | SOME (stmt,ts)=>SOME (I.MethDef(sc,retype^"[]",name,args,stmt),ts))))))))
+                            | SOME (stmt,ts)=>SOME (I.MethDef(sc,type2,name,args,stmt),ts)))))))
 
             | SOME (name,ts)=>
             (case expect T_LPAREN ts
@@ -495,6 +503,25 @@ structure Parser =  struct
           (case expect_SYM ts
             of NONE=>NONE
             | SOME (s1,ts)=>
+            (*check for array*)
+              (case find_array s1 ts
+              	of NONE =>
+              	(case expect_SYM ts
+              	  of NONE=>NONE
+              	   | SOME (s2,ts)=>
+              		(case expect T_ASSIGN ts
+                  	  of NONE=>
+                  	  (case expect T_SEMICOLON ts
+                    	of NONE=>NONE
+                    	 | SOME ts=> SOME (I.SmInitial(sc,s1,s2),ts))
+                	  | SOME ts=>
+                		(case parse_stmt ts
+                  		  of NONE=>NONE
+                  		   | SOME (s3,ts)=> 
+                  			(case expect T_SEMICOLON ts
+                    		  of NONE=>NONE
+                    		   | SOME ts=> SOME (I.Initial(sc,s1,s2,s3),ts)))))
+              | SOME (s1, ts) => 
             (case expect_SYM ts
               of NONE=>NONE
               | SOME (s2,ts)=>
@@ -509,7 +536,7 @@ structure Parser =  struct
                   | SOME (s3,ts)=> 
                   (case expect T_SEMICOLON ts
                     of NONE=>NONE
-                    | SOME ts=> SOME (I.Initial(sc,s1,s2,s3),ts)))))))
+                    | SOME ts=> SOME (I.Initial(sc,s1,s2,s3),ts))))))))
     
     fun parse_class_def ts=
       (case parse_scope ts
@@ -548,15 +575,28 @@ structure Parser =  struct
     (case expect_SYM ts
       of NONE=>SOME ([],ts)
       | SOME (typ,ts)=>
-      (case expect_SYM ts
-        of NONE=>NONE
-        | SOME (name,ts)=>
-        (case expect T_COMMA ts
-          of NONE=> SOME ([(typ,name)],ts)
-          | SOME ts=>
-          (case parse_meth_def_args ts
-            of NONE=>NONE
-            | SOME (args,ts)=> SOME ((typ,name)::args,ts)))))
+      (*check for array*)
+      (case find_array typ ts 
+      	of NONE =>
+      	(case expect_SYM ts
+          of NONE=>NONE
+           | SOME (name,ts)=>
+        	(case expect T_COMMA ts
+          	  of NONE=> SOME ([(typ,name)],ts)
+          	   | SOME ts=>
+          		(case parse_meth_def_args ts
+            	  of NONE=>NONE
+            	   | SOME (args,ts)=> SOME ((typ,name)::args,ts))))
+         | SOME (typ, ts) =>
+         (case expect_SYM ts
+        	of NONE=>NONE
+        	 | SOME (name,ts)=>
+         	 (case expect T_COMMA ts
+          	   of NONE=> SOME ([(typ,name)],ts)
+          		| SOME ts=>
+          		(case parse_meth_def_args ts
+            	  of NONE=>NONE
+            	  | SOME (args,ts)=> SOME ((typ,name)::args,ts))))))
   
   and parse_inputs ts=
     (case parse_stmt ts
