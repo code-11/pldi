@@ -277,6 +277,7 @@ structure Parser =  struct
 (*takes a string and a token list*)
 (*Returns the string with [] appended to it for each array it finds*)
 (*If there's an unmatched LBRACKET< it fails.*)
+(*
 fun find_array s ts = 
 	(case expect T_LBRACKET ts
 		of NONE => SOME (s,ts)
@@ -284,6 +285,7 @@ fun find_array s ts =
 		 (case expect T_RBRACKET ts
 		 	of NONE => NONE
 		 	 | SOME ts => find_array (s^"[]") ts))
+*)
 
   fun parse_expr ts=let 
 
@@ -322,6 +324,17 @@ fun find_array s ts =
   end
 
   and parse_stmt ts=let
+
+    fun parse_array ts =
+      (case expect T_LBRACKET ts
+        of NONE => NONE
+         | SOME ts =>
+         (case parse_inputs ts
+          of NONE => NONE
+           | SOME (ss,ts) =>
+            (case expect T_RBRACKET ts
+              of NONE => NONE
+               | SOME ts => SOME (I.ArrLit(ss),ts))))
 
     fun parse_call ts=
       (case expect_SYM ts
@@ -512,7 +525,7 @@ fun find_array s ts =
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_paren,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
+    choose [parse_array,parse_paren,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
   end
     
   and parse_scope ts=

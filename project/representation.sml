@@ -35,6 +35,7 @@ structure InternalRepresentation = struct
 			| Infix of expr*string*stmt		(*a single variable*)
 			| Var of string
 			| Paren of stmt
+			| ArrLit of stmt list
 
 	and scope = Private
 			| Public
@@ -61,6 +62,7 @@ structure InternalRepresentation = struct
 		|	strSt (Infix(val1,operator,val2)) = $["Infix(",strExpr val1,",",operator,",",strSt val2,")"]
 		| 	strSt (Var (s)) = $["Var (",s,")"]
 		| 	strSt (Paren(stmt)) = $["Paren(",strSt stmt,")"]
+		| 	strSt (ArrLit entries)= $["ArrLit(",strCallArgs entries,")"]
 	and strExpr (ECall(v,args)) = $ ["ECall (",v,",", (strCallArgs args),")"]
 		| strExpr (EVar (s)) = $["EVar (",s,")"]
 		| strExpr (EParen(stmt)) = $["Paren(",strSt stmt,")"]
