@@ -17,7 +17,7 @@ structure Run =struct
 		"(true || false)"
 
 	fun genJava5 ()=
-		"/* Blah Comment Blah */"
+		"/* Blah Comment \n Blah */"
 
 	fun genJava6 ()=
 		"int[][] a=(1+1);"
@@ -29,7 +29,7 @@ structure Run =struct
 		"{{}{}while((a==1)){a=1;}{}{}}"
 
 	fun testCallAsStmt ()=
-		"thisIsAStmt();"
+		"{thisIsAStmt(); thisIsAStmt(1); thisIsAStmt(1,2);}"
 
 	fun testCallAsValue ()=
 		"thisIsAVal()+1+1"
@@ -71,4 +71,11 @@ structure Run =struct
 			(*print (I.strSt (I.Block([I.Infix(I.Var("true"),"||",I.Var("false")),I.SmInitial(I.Default,"int","a")]))))*)
 		end
 			(*print (T.stringify (T.translate tokenList))*)
+
+
+	fun testTrans()=
+		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(genJava5())))
+		in
+			print ("\n"^(T.translate 0 stmt)^"\n\n")
+		end
 end
