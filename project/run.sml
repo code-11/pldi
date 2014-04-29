@@ -46,6 +46,9 @@ structure Run =struct
 	fun testArrayCons ()=
 		"{int[] c=new int[4]; int c[]=new int[5];}"
 
+	fun testFor3 ()=
+		"for(int i=1;i<6;i+=1){spam();}"
+
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"
 
@@ -65,6 +68,7 @@ structure Run =struct
 		run testArrayArgMeth;
 		run testArrayLit;
 		run testArrayCons;
+		run testFor3;
 		genLine())
 	and run test = 
 		let val tokenList= P.lexString(test()) in
@@ -78,7 +82,7 @@ structure Run =struct
 
 
 	fun testTrans()=
-		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(testArrayLit())))
+		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(testFor3())))
 		in
 			print ("\n"^(T.translate 0 stmt)^"\n\n")
 		end

@@ -50,6 +50,9 @@ structure Translator =  struct
 		
 		| translate level (I.ArrLit(entries)) ="["^transCallArgs entries^"]"  
 
+		| translate level (I.For3(init,check,stmt,rest))=
+			(prodInd level)^(translate 0 init)^(prodInd level)^"while("^(translate 0 check)^"):\n"^(translate level rest)^(prodInd (level+1))^(translate level stmt)
+
 	and transExpr (I.ECall(name,args))= 
 			name^"("^(transCallArgs args)^")"	
 		| transExpr (I.EVar(name))=

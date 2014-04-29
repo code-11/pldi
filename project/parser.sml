@@ -340,7 +340,13 @@ fun find_array s ts =
               | SOME (check,ts)=>
               (case parse_stmt ts
                 of NONE=>NONE
-                | SOME (stmt,ts)=> SOME (I.For3(init,check,stmt),ts))))))
+                | SOME (stmt,ts)=>
+                (case expect T_RPAREN ts
+                  of NONE=>NONE
+                  | SOME ts=>
+                  (case parse_stmt ts
+                    of NONE=>NONE
+                    | SOME (rest,ts)=>SOME (I.For3(init,check,stmt,rest),ts))))))))
 
     fun parse_array ts =
       (case expect T_LBRACE ts
@@ -410,8 +416,14 @@ fun find_array s ts =
                of NONE=>NONE
                 | SOME (oprtr,ts)=>
                 (case parse_stmt ts
-                  of NONE=>NONE
-                  | SOME (val2,ts)=>SOME (I.Infix(val1,oprtr,val2),ts))))
+                  of NONE=> NONE
+                  | SOME (val2,ts)=>
+                  (case expect T_SEMICOLON ts
+                    of NONE=> SOME (I.Infix(val1,oprtr,val2),ts)
+                    | SOME ts=>SOME (I.Infix(val1,oprtr,val2),ts)))))
+
+
+
 
 
     fun parse_meth_def ts=
