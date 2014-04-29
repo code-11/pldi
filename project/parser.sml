@@ -325,6 +325,23 @@ fun find_array s ts =
 
   and parse_stmt ts=let
 
+    fun parse_for3 ts=
+      (case expect T_FOR ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case expect T_LPAREN ts
+          of NONE=>NONE
+          | SOME ts=>
+          (case parse_stmt ts
+            of NONE=>NONE
+            | SOME (init,ts)=>
+            (case parse_stmt ts
+              of NONE=>NONE
+              | SOME (check,ts)=>
+              (case parse_stmt ts
+                of NONE=>NONE
+                | SOME (stmt,ts)=> SOME (I.For3(init,check,stmt),ts))))))
+
     fun parse_array ts =
       (case expect T_LBRACE ts
         of NONE => NONE
@@ -542,7 +559,7 @@ fun find_array s ts =
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_paren,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
+    choose [parse_paren,parse_for3,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
   end
     
   and parse_scope ts=

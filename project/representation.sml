@@ -36,6 +36,7 @@ structure InternalRepresentation = struct
 			| Var of string
 			| Paren of stmt
 			| ArrLit of stmt list
+			| For3 of stmt*stmt*stmt
 
 	and scope = Private
 			| Public
@@ -63,6 +64,7 @@ structure InternalRepresentation = struct
 		| 	strSt (Var (s)) = $["Var (",s,")"]
 		| 	strSt (Paren(stmt)) = $["Paren(",strSt stmt,")"]
 		| 	strSt (ArrLit entries)= $["ArrLit(",strCallArgs entries,")"]
+		| 	strSt (For3(init,check,stmt))= $["For3(",strSt init,",",strSt check,",",strSt stmt,")"]
 	and strExpr (ECall(v,args)) = $ ["ECall (",v,",", (strCallArgs args),")"]
 		| strExpr (EVar (s)) = $["EVar (",s,")"]
 		| strExpr (EParen(stmt)) = $["Paren(",strSt stmt,")"]
