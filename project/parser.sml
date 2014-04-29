@@ -80,6 +80,7 @@ structure Parser =  struct
                  | T_FUNCSCOPE of string
                  | T_STATIC
                  | T_INDENT
+                 | T_DPLUS
 
   fun stringOfToken (T_SYM s) = "T_SYM["^s^"]"
     | stringOfToken (T_INT i) = "T_INT["^(Int.toString i)^"]"
@@ -118,6 +119,7 @@ structure Parser =  struct
     | stringOfToken (T_FUNCSCOPE s) ="T_FUNCSCOPE["^s^"]"
     | stringOfToken T_STATIC = "T_STATIC"
     | stringOfToken T_INDENT ="T_INDENT"
+    | stringOfToken T_DPLUS = "T_DPLUS"
     | stringOfToken _="TOKEN_NOT_RECOGNIZED"
 
                    
@@ -181,6 +183,7 @@ structure Parser =  struct
   fun produceComma _ = SOME (T_COMMA)
   fun produceAssign _ = SOME (T_ASSIGN)
   fun produceDot _= SOME (T_INFIX ".")
+  fun produceDPlus _ = SOME (T_DPLUS)
 
   fun producePlusAssign _ = SOME(T_INFIX "+=")
   fun produceMinusAssign _ =SOME(T_INFIX "-=")
@@ -194,6 +197,7 @@ structure Parser =  struct
   in
     map convert [("( |\\n|\\t)+",           whitespace),
                  ("\\/\\*[^\\*]*\\*\\/", produceComment),
+                 ("\\+\\+",           produceDPlus),
                  ("\\+=",            producePlusAssign),
                  ("\\-=",           produceMinusAssign),
                  ("\\*=",           produceTimesAssign),
@@ -477,6 +481,19 @@ fun find_array s ts =
                 of NONE=> NONE
                 | SOME (stmt,ts)=>SOME (I.While(s,stmt),ts))))))
 
+(*note: ignoring ++a and the like for now - requires more backtracking than we'd like*)
+    fun parse_dplus ts=
+      (case expect_SYM ts
+        of NONE => (print("first none");NONE)
+         | SOME (s,ts) =>
+            (case expect T_DPLUS ts
+              of NONE => (print("second none");NONE)
+               | SOME ts =>
+                 (case expect T_SEMICOLON ts
+                   of NONE => SOME (I.Infix((I.EVar("1")),"+",(I.Var s)),ts)
+                    | SOME ts => SOME (I.Infix((I.EVar s),"+=",(I.Var "1")),ts))))
+
+
     fun parse_assign ts=
       (case expect_SYM ts
         of NONE=>NONE
@@ -485,10 +502,10 @@ fun find_array s ts =
           of NONE=>NONE
           | SOME ts=>
           (case parse_stmt ts
-            of NONE=>NONE
+            of NONE=> NONE
             |SOME (s2,ts)=> 
               (case expect T_SEMICOLON ts
-                of NONE=>NONE
+                of NONE=> NONE
                 | SOME ts=> SOME(I.Assign(s1,s2),ts)))))
 
     fun parse_if ts=
@@ -571,7 +588,7 @@ fun find_array s ts =
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_paren,parse_for3,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
+    choose [parse_dplus,parse_paren,parse_for3,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
   end
     
   and parse_scope ts=

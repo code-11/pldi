@@ -49,6 +49,9 @@ structure Run =struct
 	fun testFor3 ()=
 		"for(int i=1;i<6;i+=1){spam();}"
 
+	fun testDPlus () =
+		"i = a++;"
+
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"
 
@@ -69,6 +72,7 @@ structure Run =struct
 		run testArrayLit;
 		run testArrayCons;
 		run testFor3;
+		run testDPlus;
 		genLine())
 	and run test = 
 		let val tokenList= P.lexString(test()) in
