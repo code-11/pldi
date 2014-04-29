@@ -82,4 +82,14 @@ structure Run =struct
 		in
 			print ("\n"^(T.translate 0 stmt)^"\n\n")
 		end
+
+	fun testInput(file)=
+		print(TextIO.inputAll(TextIO.openIn(file)))
+
+	fun transInput(file)=
+		(*Put text content of input file through parser*)
+		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(TextIO.inputAll(TextIO.openIn(file)))))
+		in
+			print ("\n"^(T.translate 0 stmt)^"\n\n")
+		end
 end
