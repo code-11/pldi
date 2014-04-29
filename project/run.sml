@@ -41,7 +41,10 @@ structure Run =struct
 		"public static int[] spam(int[] a){a=1;} "
 
 	fun testArrayLit ()=
-		"{int[] c = []; int[] d = [1]; int[] e = [1,2];}"
+		"{int[] c = {}; int[] d = {1}; int[] e = {1,2}; int d[]={1,2,3};}"
+
+	fun testArrayCons ()=
+		"{int[] c=new int[4]; int c[]=new int[5];}"
 
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"
@@ -61,6 +64,7 @@ structure Run =struct
 		run testDot;
 		run testArrayArgMeth;
 		run testArrayLit;
+		run testArrayCons;
 		genLine())
 	and run test = 
 		let val tokenList= P.lexString(test()) in

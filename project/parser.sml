@@ -326,15 +326,26 @@ fun find_array s ts =
   and parse_stmt ts=let
 
     fun parse_array ts =
-      (case expect T_LBRACKET ts
+      (case expect T_LBRACE ts
         of NONE => NONE
          | SOME ts =>
          (case parse_inputs ts
           of NONE => NONE
            | SOME (ss,ts) =>
-            (case expect T_RBRACKET ts
+            (case expect T_RBRACE ts
               of NONE => NONE
                | SOME ts => SOME (I.ArrLit(ss),ts))))
+
+(*    and parse_array_const ts=
+      (case expect T_LBRACKET ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case parse_stmt ts
+          of NONE=>NONE
+          | SOME (stmt,ts)=>
+          (case expect T_RBRACKET ts
+            of NONE=>NONE
+            | SOME ts=> SOME (I.ArrLit([stmt]),ts))))*)
 
     fun parse_call ts=
       (case expect_SYM ts
