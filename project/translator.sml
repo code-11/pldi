@@ -41,11 +41,14 @@ structure Translator =  struct
 		| translate level (I.Comment(s)) = 
 			"\"\"\""^s^"\"\"\""
 
-		(*translate I.Infix = *)		(*a single variable*)
-		| translate level (I.Var s) = s
+(*		| translate (I.Infix =
+*)		| translate level (I.Var s) = s
 		
-		(*translate I.Paren = *)
+		| translate level (I.Paren(stmt)) = "("^stmt^")" 
 		(*translate I.ArrLit = *) 
+
+(*	and transExpr level (I.ECall(name,args))=
+*)		
 
 	and transArgs [] = ""
 		| transArgs [(typ,arg)] = arg
