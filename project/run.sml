@@ -78,7 +78,7 @@ structure Run =struct
 
 
 	fun testTrans()=
-		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(genJava5())))
+		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(testArrayLit())))
 		in
 			print ("\n"^(T.translate 0 stmt)^"\n\n")
 		end

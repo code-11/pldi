@@ -13,7 +13,7 @@ structure Translator =  struct
 			(prodInd level)^"def "^name^"("^(transArgs args)^"):\n"^(translate level body)
 
 		| translate level (I.Initial(scope,typ,name,value)) =
-			(prodInd level)^name^"="^(translate level value)
+			(prodInd level)^name^"="^(translate level value)^"\n"
 
 		| translate level (I.SmInitial(scope,typ,name)) =""
 
@@ -41,14 +41,21 @@ structure Translator =  struct
 		| translate level (I.Comment(s)) = 
 			"\"\"\""^s^"\"\"\""
 
-(*		| translate (I.Infix =
-*)		| translate level (I.Var s) = s
-		
-		| translate level (I.Paren(stmt)) = "("^stmt^")" 
-		(*translate I.ArrLit = *) 
+		| translate level (I.Infix(val1,oper,val2))=
+			(transExpr val1)^" "^oper^" "^(translate 0 val2) 
 
-(*	and transExpr level (I.ECall(name,args))=
-*)		
+		| translate level (I.Var s) = s
+		
+		| translate level (I.Paren(stmt)) = "("^(translate 0 stmt)^")" 
+		
+		| translate level (I.ArrLit(entries)) ="["^transCallArgs entries^"]"  
+
+	and transExpr (I.ECall(name,args))= 
+			name^"("^(transCallArgs args)^")"	
+		| transExpr (I.EVar(name))=
+			name
+		| transExpr (I.EParen(stmt))=
+			"("^(translate 0 stmt)^")"	
 
 	and transArgs [] = ""
 		| transArgs [(typ,arg)] = arg

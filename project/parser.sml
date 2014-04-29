@@ -515,12 +515,18 @@ fun find_array s ts =
                     of NONE=>NONE
                     | SOME ts=> SOME (I.SmInitial(sc,s1,s2),ts))
                 | SOME ts=>
-                (case parse_stmt ts
-                  of NONE=>NONE
-                  | SOME (s3,ts)=> 
+                (case parse_array ts
+                  of NONE=> 
+                    (case parse_stmt ts
+                      of NONE=>NONE 
+                      | SOME (stmt,ts)=> 
+                        (case expect T_SEMICOLON ts
+                          of NONE=>NONE
+                          | SOME ts=> SOME (I.Initial(sc,s1,s2,stmt),ts)))
+                  | SOME (lit,ts)=> 
                   (case expect T_SEMICOLON ts
                     of NONE=>NONE
-                    | SOME ts=> SOME (I.Initial(sc,s1,s2,s3),ts)))))))
+                    | SOME ts=> SOME (I.Initial(sc,s1,s2,lit),ts)))))))
     
     fun parse_class_def ts=
       (case parse_scope ts
@@ -536,7 +542,7 @@ fun find_array s ts =
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_array,parse_paren,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
+    choose [parse_paren,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_infix,parse_class_def,parse_initial,parse_comment,parse_var] ts
   end
     
   and parse_scope ts=
