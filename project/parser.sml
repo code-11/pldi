@@ -309,23 +309,42 @@ fun find_array s ts =
 		 	 | SOME ts => find_array (s^"[]") ts))
 *)
 
-  fun parse_expr ts=let 
+  fun parse_limExpr ts=let 
+
+    fun parse_neg ts=
+      (case expect_EINFIX ts
+        of NONE=>NONE
+        | SOME (infx,ts)=>
+          (case infx of 
+            "-"=>
+              (case parse_expr ts
+                of NONE=>NONE
+                | SOME (expr,ts)=> SOME ((I.Neg expr),ts))
+             | _ =>NONE))
+
+    fun parse_not ts=
+      (case expect T_NOT ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case parse_expr ts
+          of NONE=>NONE
+          | SOME (expr,ts)=>SOME (I.Not(expr),ts)))
 
     fun parse_eparen ts=
       (case expect T_LPAREN ts
         of NONE=>NONE
         | SOME ts=>
-        (case parse_stmt ts
+        (case parse_expr ts
           of NONE=>NONE
-          | SOME (stmt,ts)=>
+          | SOME (expr,ts)=>
           (case expect T_RPAREN ts
             of NONE=>NONE
-            | SOME ts=> SOME (I.EParen(stmt),ts))))
+            | SOME ts=> SOME (I.Paren(expr),ts))))
 
     fun parse_evar ts=
       (case expect_SYM ts
         of NONE=>NONE
-        | SOME (s,ts)=>(SOME (I.EVar(s),ts)))
+        | SOME (s,ts)=>(SOME (I.Var(s),ts)))
 
     fun parse_ecall ts=
       (case expect_SYM ts
@@ -341,9 +360,42 @@ fun find_array s ts =
               of NONE=>NONE
               | SOME ts=>SOME (I.ECall(name,args),ts)))))
 
+      fun parse_array ts =
+      (case expect T_LBRACE ts
+        of NONE => NONE
+         | SOME ts =>
+         (case parse_inputs ts
+          of NONE => NONE
+           | SOME (ss,ts) =>
+            (case expect T_RBRACE ts
+              of NONE => NONE
+               | SOME ts => SOME (I.ArrLit(ss),ts))))
 
-    in     choose [parse_eparen,parse_ecall,parse_evar] ts
+
+    in     choose [parse_array,parse_eparen,parse_ecall,parse_not,parse_neg,parse_evar] ts
   end
+
+  and parse_expr ts= let
+    (*Parse infix operators that return a value and do NOT require a semicolon*)
+    fun parse_Einfix ts=
+         (case parse_limExpr ts
+            of NONE=>NONE
+             | SOME (val1,ts)=>
+             (case expect_EINFIX ts
+               of NONE=>NONE
+                | SOME (oprtr,ts)=>
+                (case parse_expr ts
+                  of NONE=> NONE
+                  | SOME (val2,ts)=>SOME (I.EInfix(val1,oprtr,val2),ts))))
+
+    fun parse_other_expr ts=
+      (case parse_limExpr ts
+        of NONE=>NONE
+        | SOME (expr,ts)=> SOME ((I.LExpr(expr)),ts) )
+    in  
+      choose [parse_Einfix,parse_other_expr] ts
+    end
+
 
   and parse_stmt ts=let
 
@@ -357,7 +409,7 @@ fun find_array s ts =
                 | SOME (oprtr,ts)=>
                 (case parse_stmt ts
                   of NONE=> NONE
-                  | SOME (val2,ts)=>SOME (I.Infix(val1,oprtr,val2),ts))))
+                  | SOME (val2,ts)=>SOME (I.SInfix(val1,oprtr,val2),ts))))
 
 
     fun parse_for3 ts=
@@ -370,7 +422,7 @@ fun find_array s ts =
           (case parse_stmt ts
             of NONE=>NONE
             | SOME (init,ts)=>
-            (case parse_stmt ts
+            (case parse_expr ts
               of NONE=>NONE
               | SOME (check,ts)=>
               (case expect T_SEMICOLON ts
@@ -395,37 +447,7 @@ fun find_array s ts =
                             of NONE=>NONE
                             | SOME (rest,ts)=>SOME (I.For3(init,check,stmt,rest),ts))))))))))
 
-    fun parse_neg ts=
-      (case expect_EINFIX ts
-        of NONE=>NONE
-        | SOME (infx,ts)=>
-          (case infx of 
-            "-"=>
-              (case parse_stmt ts
-                of NONE=>NONE
-                | SOME (stmt,ts)=> SOME ((I.Neg stmt),ts))
-             | _ =>NONE))
-
-    fun parse_not ts=
-      (case expect T_NOT ts
-        of NONE=>NONE
-        | SOME ts=>
-        (case parse_stmt ts
-          of NONE=>NONE
-          | SOME (stmt,ts)=>SOME (I.Not(stmt),ts)))
-
-    fun parse_array ts =
-      (case expect T_LBRACE ts
-        of NONE => NONE
-         | SOME ts =>
-         (case parse_inputs ts
-          of NONE => NONE
-           | SOME (ss,ts) =>
-            (case expect T_RBRACE ts
-              of NONE => NONE
-               | SOME ts => SOME (I.ArrLit(ss),ts))))
-
-    fun parse_call ts=
+    fun parse_scall ts=
       (case expect_SYM ts
         of NONE=>NONE
         | SOME (name,ts)=>
@@ -440,40 +462,12 @@ fun find_array s ts =
               | SOME ts=>
               (case expect T_SEMICOLON ts
                 of NONE=>NONE
-                | SOME ts=> SOME (I.Call(name,args),ts))))))
-
-    fun parse_paren ts=
-      (case expect T_LPAREN ts
-        of NONE=>NONE
-        | SOME ts=>
-        (case parse_stmt ts
-          of NONE=>NONE
-          | SOME (stmt,ts)=>
-          (case expect T_RPAREN ts
-            of NONE=>NONE
-            | SOME ts=> SOME (I.Paren(stmt),ts))))
-
-    fun parse_var ts=
-      (case expect_SYM ts
-        of NONE=>NONE
-        | SOME (s,ts)=>(SOME (I.Var(s),ts)))
+                | SOME ts=> SOME (I.SCall(name,args),ts))))))
 
     fun parse_comment ts=
       (case expect_COMMENT ts
         of NONE=>NONE
         | SOME (text,ts)=>SOME (I.Comment(text),ts))
-
-(*Parse infix operators that return a value and do NOT require a semicolon*)
-    fun parse_Einfix ts=
-         (case parse_expr ts
-            of NONE=>NONE
-             | SOME (val1,ts)=>
-             (case expect_EINFIX ts
-               of NONE=>NONE
-                | SOME (oprtr,ts)=>
-                (case parse_stmt ts
-                  of NONE=> NONE
-                  | SOME (val2,ts)=>SOME (I.Infix(val1,oprtr,val2),ts))))
 
 (*Parse infix operators that usually don't return a value and DO require a semicolon*)
     fun parse_Sinfix ts=
@@ -488,7 +482,7 @@ fun find_array s ts =
                   | SOME (val2,ts)=>
                   (case expect T_SEMICOLON ts
                     of NONE=>NONE
-                    | SOME ts=>SOME (I.Infix(val1,oprtr,val2),ts)))))
+                    | SOME ts=>SOME (I.SInfix(val1,oprtr,val2),ts)))))
 
 
     fun parse_meth_def ts=
@@ -518,7 +512,7 @@ fun find_array s ts =
       (case expect T_RETURN ts
         of NONE=>NONE
         | SOME ts=>
-        (case parse_stmt ts
+        (case parse_expr ts
           of NONE=>NONE
           | SOME (s,ts)=> 
             (case expect T_SEMICOLON ts
@@ -532,7 +526,7 @@ fun find_array s ts =
         (case expect T_LPAREN ts
           of NONE=> NONE
           | SOME ts=>
-          (case parse_stmt ts
+          (case parse_expr ts
             of NONE=> NONE
             | SOME (s,ts)=>
             (case expect T_RPAREN ts
@@ -554,11 +548,11 @@ fun find_array s ts =
                   | SOME ts=>
                     (case expect T_SEMICOLON ts
                       of NONE=>NONE
-                      | SOME ts => SOME (I.Infix((I.EVar s),"-=",(I.Var "1")),ts)))
+                      | SOME ts => SOME (I.SInfix((I.LExpr(I.Var s)),"-=",I.CheatExpr(I.LExpr(I.Var "1"))),ts)))
                | SOME ts =>
                  (case expect T_SEMICOLON ts
                   of NONE=>NONE
-                    | SOME ts => SOME (I.Infix((I.EVar s),"+=",(I.Var "1")),ts) )))
+                    | SOME ts => SOME (I.SInfix((I.LExpr(I.Var s)),"+=",I.CheatExpr(I.LExpr(I.Var "1"))),ts) )))
 
 (*For special cases, when a ++ or -- posfix is found without a semicolon*)
    fun special_postfix ts=
@@ -569,8 +563,8 @@ fun find_array s ts =
             of NONE => 
               (case expect T_DMINUS ts
                 of NONE=>NONE
-                | SOME ts=> SOME (I.Infix((I.EVar s),"-=",(I.Var "1")),ts))
-             | SOME ts => SOME (I.Infix((I.EVar s),"+=",(I.Var "1")),ts)))
+                | SOME ts=> SOME (I.SInfix((I.LExpr(I.Var s)),"-=",I.CheatExpr(I.LExpr(I.Var "1"))),ts))
+             | SOME ts => SOME (I.SInfix((I.LExpr(I.Var s)),"+=",I.CheatExpr(I.LExpr(I.Var "1"))),ts)))
 
 
     fun parse_assign ts=
@@ -580,7 +574,7 @@ fun find_array s ts =
         (case expect T_ASSIGN ts
           of NONE=>NONE
           | SOME ts=>
-          (case parse_stmt ts
+          (case parse_expr ts
             of NONE=> NONE
             |SOME (s2,ts)=> 
               (case expect T_SEMICOLON ts
@@ -594,7 +588,7 @@ fun find_array s ts =
         (case expect T_LPAREN ts
           of NONE=>NONE
           |SOME ts=>
-          (case parse_stmt ts
+          (case parse_expr ts
             of NONE=>NONE
             | SOME (s,ts)=>
             (case expect T_RPAREN ts
@@ -640,19 +634,18 @@ fun find_array s ts =
                     of NONE=>NONE
                     | SOME ts=> SOME (I.SmInitial(sc,s1,s2),ts))
                 | SOME ts=>
-                (case parse_array ts
-                  of NONE=> 
-                    (case parse_stmt ts
+                    (case parse_expr ts
                       of NONE=>NONE 
-                      | SOME (stmt,ts)=> 
+                      | SOME (expr,ts)=> 
                         (case expect T_SEMICOLON ts
                           of NONE=>NONE
-                          | SOME ts=> SOME (I.Initial(sc,s1,s2,stmt),ts)))
-                  | SOME (lit,ts)=> 
-                  (case expect T_SEMICOLON ts
-                    of NONE=>NONE
-                    | SOME ts=> SOME (I.Initial(sc,s1,s2,lit),ts)))))))
+                          | SOME ts=> SOME (I.Initial(sc,s1,s2,expr),ts)))))))
     
+    fun parse_cheat_expr ts=
+      (case parse_expr ts
+        of NONE=>NONE
+        | SOME (expr,ts)=> SOME (I.CheatExpr(expr),ts))
+
     fun parse_class_def ts=
       (case parse_scope ts
         of NONE=>NONE
@@ -667,7 +660,7 @@ fun find_array s ts =
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_postfix,parse_paren,parse_for3,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_Sinfix,parse_Einfix,parse_class_def, parse_neg,parse_initial,parse_comment,parse_not,parse_var] ts
+    choose [parse_postfix,parse_for3,parse_if,parse_scall,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_Sinfix,parse_class_def,parse_initial,parse_comment,parse_cheat_expr] ts
   end
     
   and parse_scope ts=
@@ -701,7 +694,7 @@ fun find_array s ts =
             	  | SOME (args,ts)=> SOME ((typ,name)::args,ts)))))
   
   and parse_inputs ts=
-    (case parse_stmt ts
+    (case parse_expr ts
       of NONE=>SOME ([],ts)
       | SOME (s,ts)=>
       (case expect T_COMMA ts

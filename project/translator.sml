@@ -14,64 +14,73 @@ structure Translator =  struct
 			(prodInd level)^"def "^name^"("^(transArgs args)^"):\n"^(translate level body)
 
 		| translate level (I.Initial(scope,typ,name,value)) =
-			(prodInd level)^name^"="^(translate level value)^"\n"
+			(prodInd level)^name^"="^(transExpr value)^"\n"
 
 		| translate level (I.SmInitial(scope,typ,name)) =""
 
 		| translate level (I.Assign(name,value)) =
-			(prodInd level)^name^"="^(translate level value)^"\n"
+			(prodInd level)^name^"="^(transExpr value)^"\n"
 		
-		| translate level (I.Call(name,args))=
+		| translate level (I.SCall(name,args))=
 			(prodInd level)^name^"("^(transCallArgs args)^")"^"\n"
 
 		| translate level (I.If(cond,body))=
-			(prodInd level)^"if("^(translate 0 cond)^"):\n"^(translate level body)
+			(prodInd level)^"if("^(transExpr cond)^"):\n"^(translate level body)
 
 		| translate level (I.IfElse(ifCond,ifBody,elseBody)) =
-			(prodInd level)^"if("^(translate 0 ifCond)^"):\n"^(translate level ifBody)^"\n"^(prodInd level)^"else:\n"^(translate level elseBody)
+			(prodInd level)^"if("^(transExpr ifCond)^"):\n"^(translate level ifBody)^"\n"^(prodInd level)^"else:\n"^(translate level elseBody)
 		
 		| translate level (I.While(cond,body)) =
-			(prodInd level)^ "while("^(translate 0 cond)^"):\n"^(translate level body)
+			(prodInd level)^ "while("^(transExpr cond)^"):\n"^(translate level body)
 			(*stmt=return value*)
 		
 		| translate level (I.Return(st)) =
-			(prodInd level)^"return "^(translate level st)
+			(prodInd level)^"return "^(transExpr st)
 		(*ignoring arbitrary blocks because bad style*)
 		| translate level (I.Block(ss)) = transList (level+1) ss
 
 		| translate level (I.Comment(s)) = 
 			"\"\"\""^s^"\"\"\""
 
-		| translate level (I.Infix(val1,oper,val2))=
+		| translate level (I.SInfix(val1,oper,val2))=
 			let fun trans val1 oper val2= (transExpr val1)^" "^oper^" "^(translate 0 val2) in
 			(case oper
 				of "&&"=> let val oper="and" in (trans val1 oper val2) end
 				|  "||"=> let val oper="or" in (trans val1 oper val2) end
 				|   _  => (trans val1 oper val2))
 			end
-			 
-
-		| translate level (I.Var s) = s
 		
-		| translate level (I.Paren(stmt)) = "("^(translate 0 stmt)^")" 
-		
-		| translate level (I.ArrLit(entries)) ="["^transCallArgs entries^"]"  
 
 		| translate level (I.For3(init,check,stmt,rest))=
-			(prodInd level)^(translate 0 init)^(prodInd level)^"while("^(translate 0 check)^"):\n"^(translate level rest)^(prodInd (level+1))^(translate level stmt)
+			(prodInd level)^(translate 0 init)^(prodInd level)^"while("^(transExpr check)^"):\n"^(translate level rest)^(prodInd (level+1))^(translate level stmt)
 
-		| translate level (I.Not(stmt))=
-			" not "^(translate 0 stmt)
+		| translate level (I.CheatExpr(expr))=
+			(transExpr expr)
 
-		| translate level (I.Neg(stmt))=
-			" -"^(translate 0 stmt)
+	and transExpr (I.EInfix(val1,oper,val2))=
+			(transLimExpr val1)^" "^oper^" "^(transExpr val2)
 
-	and transExpr (I.ECall(name,args))= 
+		| transExpr (I.LExpr (lexpr))=
+			(transLimExpr lexpr)
+
+	and transLimExpr (I.ECall(name,args))= 
 			name^"("^(transCallArgs args)^")"	
-		| transExpr (I.EVar(name))=
+
+		| transLimExpr (I.Var(name))=
 			name
-		| transExpr (I.EParen(stmt))=
-			"("^(translate 0 stmt)^")"	
+
+		| transLimExpr (I.Paren(stmt))=
+			"("^(transExpr stmt)^")"
+
+		| transLimExpr (I.Not(stmt))=
+			" not "^(transExpr stmt)
+
+		| transLimExpr (I.Neg(stmt))=
+			" -"^(transExpr stmt)	
+
+		| transLimExpr (I.ArrLit(entries)) =
+			"["^transCallArgs entries^"]"  
+	
 
 	and transArgs [] = ""
 		| transArgs [(typ,arg)] = arg
@@ -81,8 +90,8 @@ structure Translator =  struct
 		| transList level (s::ss)=(translate level s)^(transList level ss)
 
 	and transCallArgs []=""
-		| transCallArgs [arg] = translate 0 arg
-		| transCallArgs (arg::args)= (translate 0 arg)^","^(transCallArgs args)
+		| transCallArgs [arg] = transExpr arg
+		| transCallArgs (arg::args)= (transExpr arg)^","^(transCallArgs args)
 
 
 	and prodInd level=

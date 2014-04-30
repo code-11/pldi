@@ -14,7 +14,7 @@ structure Run =struct
 		"class HelloWorld{"^genJava1()^"}"
 
 	fun genJava4 ()=
-		"(true || false)"
+		"if(true || false){}"
 
 	fun genJava5 ()=
 		"/* Blah Comment \n Blah */"
@@ -35,7 +35,7 @@ structure Run =struct
 		"thisIsAVal()+1+1"
 
 	fun testDot ()=
-		"this.this.this.that;"
+		"if(this.this.this.that){}"
 
 	fun testArrayArgMeth ()=
 		"public static int[] spam(int[] a){a=1;} "
@@ -53,10 +53,10 @@ structure Run =struct
 		"{j++; j--;}"
 
 	fun testInfix ()=
-		"{i+=1; i=1+1; i=j!=k;}"
+		"i+=1;"(* i=1+1; i=j!=k;}"*)
 
 	fun testUnary ()=
-		"{{-1}{!k}{int a=!b;}}"
+		"{if(-1){a=1;}if(!k){a=!b;}}"
 
 	fun testNest ()=
 		"return node.getValue();"
