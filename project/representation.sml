@@ -38,6 +38,7 @@ structure InternalRepresentation = struct
 			| ArrLit of stmt list
 			| For3 of stmt*stmt*stmt*stmt
 			| Not of stmt
+			| Neg of stmt
 
 	and scope = Private
 			| Public
@@ -67,6 +68,7 @@ structure InternalRepresentation = struct
 		| 	strSt (ArrLit entries)= $["ArrLit(",strCallArgs entries,")"]
 		| 	strSt (For3(init,check,stmt,rest))= $["For3(",strSt init,",",strSt check,",",strSt stmt,",",strSt rest,")"]
 		| 	strSt (Not(stmt))= $["Not("^strSt stmt^")"]
+		|	strSt (Neg(stmt))= $["Neg("^strSt stmt^")"]
 	and strExpr (ECall(v,args)) = $ ["ECall (",v,",", (strCallArgs args),")"]
 		| strExpr (EVar (s)) = $["EVar (",s,")"]
 		| strExpr (EParen(stmt)) = $["Paren(",strSt stmt,")"]

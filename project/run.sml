@@ -56,7 +56,7 @@ structure Run =struct
 		"{i+=1; i=1+1; i=j!=k;}"
 
 	fun testUnary ()=
-		"{!k !k}"
+		"{{-1}{!k}{int a=!b;}}"
 
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"
@@ -94,7 +94,7 @@ structure Run =struct
 
 
 	fun testTrans()=
-		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(testFor3())))
+		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(genJava3())))
 		in
 			print ("\n"^(T.translate 0 stmt)^"\n\n")
 		end

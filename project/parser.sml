@@ -395,6 +395,17 @@ fun find_array s ts =
                             of NONE=>NONE
                             | SOME (rest,ts)=>SOME (I.For3(init,check,stmt,rest),ts))))))))))
 
+    fun parse_neg ts=
+      (case expect_EINFIX ts
+        of NONE=>NONE
+        | SOME (infx,ts)=>
+          (case infx of 
+            "-"=>
+              (case parse_stmt ts
+                of NONE=>NONE
+                | SOME (stmt,ts)=> SOME ((I.Neg stmt),ts))
+             | _ =>NONE))
+
     fun parse_not ts=
       (case expect T_NOT ts
         of NONE=>NONE
@@ -656,7 +667,7 @@ fun find_array s ts =
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_postfix,parse_paren,parse_for3,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_Sinfix,parse_Einfix,parse_class_def,parse_initial,parse_comment,parse_not,parse_var] ts
+    choose [parse_postfix,parse_paren,parse_for3,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_Sinfix,parse_Einfix,parse_class_def, parse_neg,parse_initial,parse_comment,parse_not,parse_var] ts
   end
     
   and parse_scope ts=
