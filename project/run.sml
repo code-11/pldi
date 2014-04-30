@@ -58,6 +58,10 @@ structure Run =struct
 	fun testUnary ()=
 		"{{-1}{!k}{int a=!b;}}"
 
+	fun testNest ()=
+		"return node.getValue();"
+		(*"if(node.getValue()){i++;}"
+*)
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"
 
@@ -81,6 +85,7 @@ structure Run =struct
 		run testDPlus;
 		run testInfix;
 		run testUnary;
+		run testNest;
 		genLine())
 	and run test = 
 		let val tokenList= P.lexString(test()) in
