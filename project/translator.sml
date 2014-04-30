@@ -6,6 +6,7 @@ structure Translator =  struct
 	(*Takes an internal rep statement
 		Recursively turns it into a Python string
 		Yay?*)
+
 	fun translate level (I.ClassDef(scope,name,body)) =
 			"class "^name^":\n"^(translate level body)
 
@@ -42,7 +43,13 @@ structure Translator =  struct
 			"\"\"\""^s^"\"\"\""
 
 		| translate level (I.Infix(val1,oper,val2))=
-			(transExpr val1)^" "^oper^" "^(translate 0 val2) 
+			let fun trans val1 oper val2= (transExpr val1)^" "^oper^" "^(translate 0 val2) in
+			(case oper
+				of "&&"=> let val oper="and" in (trans val1 oper val2) end
+				|  "||"=> let val oper="or" in (trans val1 oper val2) end
+				|   _  => (trans val1 oper val2))
+			end
+			 
 
 		| translate level (I.Var s) = s
 		

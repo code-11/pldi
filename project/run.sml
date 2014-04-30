@@ -8,7 +8,7 @@ structure Run =struct
 		"public static void herp(double a,float b){return b;}"
 
 	fun genJava3 ()=
-		"String spam(int a){while(a){if(a){return a;}else{return b;}}}"
+		"String spam(int a){while(a&&b){if(a){return a;}else{return b;}}}"
 
 	fun genJava2 ()=
 		"class HelloWorld{"^genJava1()^"}"
