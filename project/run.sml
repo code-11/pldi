@@ -52,8 +52,11 @@ structure Run =struct
 	fun testDPlus () =
 		"{j++; j--;}"
 
-	fun testFear ()=
-		"{i+=1; i=1+1;}"
+	fun testInfix ()=
+		"{i+=1; i=1+1; i=j!=k;}"
+
+	fun testUnary ()=
+		"{!k !k}"
 
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"
@@ -76,7 +79,8 @@ structure Run =struct
 		run testArrayCons;
 		run testFor3;
 		run testDPlus;
-		run testFear;
+		run testInfix;
+		run testUnary;
 		genLine())
 	and run test = 
 		let val tokenList= P.lexString(test()) in

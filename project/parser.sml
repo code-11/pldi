@@ -75,6 +75,7 @@ structure Parser =  struct
                  | T_SUPER
                  | T_THIS
                  | T_NULL
+                 | T_NOT
                  | T_DOT
                  | T_SINFIX of string
                  | T_EINFIX of string
@@ -98,6 +99,7 @@ structure Parser =  struct
     | stringOfToken T_RPAREN = "T_RPAREN"
     | stringOfToken T_LBRACKET = "T_LBRACKET"
     | stringOfToken T_RBRACKET = "T_RBRACKET"
+    | stringOfToken T_NOT ="T_NOT"
     | stringOfToken T_PLUS = "T_PLUS"
     | stringOfToken T_TIMES = "T_TIMES"
     | stringOfToken T_COMMA = "T_COMMA"
@@ -162,7 +164,7 @@ structure Parser =  struct
                           of NONE => parseError "integer literal out of bounds"
                            | SOME i => SOME (T_INT i))
                         
-  fun produceEqual _ = SOME (T_EINFIX "==")
+  
   fun produceLParen _ = SOME (T_LPAREN)
   fun produceRParen _ = SOME (T_RPAREN)
 
@@ -175,6 +177,8 @@ structure Parser =  struct
   fun produceSInfix s = SOME (T_SINFIX s)
   fun produceEInfix s = SOME (T_EINFIX s)
 
+  fun produceNot _= SOME (T_NOT)
+
   fun producePlus _ = SOME (T_EINFIX "+")
   fun produceTimes _ = SOME (T_EINFIX "*")
   fun produceMinus _ =SOME (T_EINFIX "-")
@@ -183,6 +187,8 @@ structure Parser =  struct
   fun produceGreat _ = SOME (T_EINFIX ">")
   fun produceLessEq _=SOME (T_EINFIX "<=")
   fun produceGreatEq _ = SOME (T_EINFIX ">=")
+  fun produceEqual _ = SOME (T_EINFIX "==")
+  fun produceNotEqual _ = SOME (T_EINFIX "!=")
   fun produceAnd _= SOME (T_EINFIX "&&")
   fun produceOr _= SOME (T_EINFIX "||")
   fun produceComma _ = SOME (T_COMMA)
@@ -202,13 +208,14 @@ structure Parser =  struct
     fun convert (re,f) = (R.compileString re, f)
   in
     map convert [("( |\\n|\\t)+",           whitespace),
-                 ("\\/\\*[^\\*]*\\*\\/", produceComment),
-                 ("\\-\\-",               produceDMinus),
-                 ("\\+\\+",           produceDPlus),
+                 ("\\/\\*[^\\*]*\\*\\/",produceComment),
+                 ("\\-\\-",              produceDMinus),
+                 ("\\+\\+",               produceDPlus),
                  ("\\+=",            producePlusAssign),
                  ("\\-=",           produceMinusAssign),
                  ("\\*=",           produceTimesAssign),
                  ("==",                   produceEqual),
+                 ("!=",                produceNotEqual),
                  ("\\+",                   producePlus),
                  ("\\-",                  produceMinus),
             		 ("\\*",                  produceTimes),
@@ -220,7 +227,7 @@ structure Parser =  struct
                  ("&&",                     produceAnd),
                  ("\\|\\|",                  produceOr),
             		 (",",                    produceComma),
-            		 (";",                    produceSemiColon),
+            		 (";",                produceSemiColon),
                  ("[a-zA-Z][\\[\\]a-zA-Z0-9\\.]*", produceSymbol),
                  ("~?[0-9]+",             produceSymbol),
                  ("\\(",                  produceLParen),
@@ -231,6 +238,7 @@ structure Parser =  struct
                  ("\\[",                  produceLBracket),
                  ("\\]",                  produceRBracket),
                  ("\\.",                  produceDot),
+                 ("!",                      produceNot),
                  ("\\\"[^\\\"]*\\\"",     produceSymbol)]
   end
   
@@ -386,6 +394,14 @@ fun find_array s ts =
                           (case parse_stmt ts
                             of NONE=>NONE
                             | SOME (rest,ts)=>SOME (I.For3(init,check,stmt,rest),ts))))))))))
+
+    fun parse_not ts=
+      (case expect T_NOT ts
+        of NONE=>NONE
+        | SOME ts=>
+        (case parse_stmt ts
+          of NONE=>NONE
+          | SOME (stmt,ts)=>SOME (I.Not(stmt),ts)))
 
     fun parse_array ts =
       (case expect T_LBRACE ts
@@ -640,7 +656,7 @@ fun find_array s ts =
               of NONE=>NONE
               | SOME (stmt,ts)=> SOME (I.ClassDef(sc,s,stmt),ts)))))
   in 
-    choose [parse_postfix,parse_paren,parse_for3,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_Sinfix,parse_Einfix,parse_class_def,parse_initial,parse_comment,parse_var] ts
+    choose [parse_postfix,parse_paren,parse_for3,parse_if,parse_call,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_array,parse_Sinfix,parse_Einfix,parse_class_def,parse_initial,parse_comment,parse_not,parse_var] ts
   end
     
   and parse_scope ts=
