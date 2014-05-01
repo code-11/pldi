@@ -115,11 +115,16 @@ structure Run =struct
 	fun testInput(file)=
 		print(TextIO.inputAll(TextIO.openIn(file)))
 
-	fun transInput(file)=
+	fun transInput(fileIn,fileOut)=
 		(*Put text content of input file through parser*)
-		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(TextIO.inputAll(TextIO.openIn(file)))))
+		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(TextIO.inputAll(TextIO.openIn(fileIn)))))
 		in
-			print ("\n"^(T.translate 0 stmt)^"\n\n")
-			(*print (I.strSt stmt)*)
+			(*(print (I.strSt stmt);
+			print ("\n"^(T.translate 0 stmt)^"\n\n"))*)
+			let val os = TextIO.openOut(fileOut)
+			in
+				(TextIO.output(os,(T.translate 0 stmt));
+				(TextIO.closeOut(os)))
+			end
 		end
 end
