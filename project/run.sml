@@ -62,6 +62,12 @@ structure Run =struct
 		"return node.getValue();"
 		(*"if(node.getValue()){i++;}"
 *)
+	fun testIfs ()=
+		"public static void main(){"^testUnary()^"}"
+
+	fun nestInfix ()=
+		"if (n==null && n==null){c=3;}"	
+
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"
 
@@ -86,6 +92,8 @@ structure Run =struct
 		run testInfix;
 		run testUnary;
 		run testNest;
+		run testIfs;
+		run nestInfix;
 		genLine())
 	and run test = 
 		let val tokenList= P.lexString(test()) in
@@ -112,5 +120,6 @@ structure Run =struct
 		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(TextIO.inputAll(TextIO.openIn(file)))))
 		in
 			print ("\n"^(T.translate 0 stmt)^"\n\n")
+			(*print (I.strSt stmt)*)
 		end
 end
