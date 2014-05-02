@@ -344,7 +344,7 @@ structure Parser =  struct
   (*First argument is the longer one*)
   (*third argument is the list built up internally*)
   fun diff_token (t1::ts1) ts2 ret =
-    if (ts1 = ts2) then (ret@[t1]) else (diff_token ts1 ts2 (t1::ret))
+    if (ts1 = ts2) then (t1::ret) else (diff_token ts1 ts2 (t1::ret))
     | diff_token [] [] ret = ret
     | diff_token _ _ _ = parseError "unexpected tokens"
 
