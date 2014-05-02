@@ -39,8 +39,8 @@ structure Translator =  struct
 		(*ignoring arbitrary blocks because bad style*)
 		| translate level (I.Block(ss)) = transList (level+1) ss
 
-		| translate level (I.Comment(s)) = 
-			"\"\"\""^s^"\"\"\""
+		| translate level (I.Comment(s,stmt)) = 
+			"\"\"\""^s^"\"\"\"\n"^(translate level stmt)
 
 		| translate level (I.SInfix(val1,oper,val2))=
 			let fun trans val1 oper val2= (transExpr val1)^" "^oper^" "^(translate 0 val2) in

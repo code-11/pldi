@@ -128,6 +128,51 @@ structure Parser =  struct
     | stringOfToken T_DMINUS ="T_DMINUS"
     | stringOfToken _="TOKEN_NOT_RECOGNIZED"
 
+
+  (*A mini-translator of tokens for use in array symbols*)
+  fun repStringOfToken(T_SYM s) = s
+    | repStringOfToken (T_INT i) = Int.toString i
+    | repStringOfToken (T_STRING s) = s
+    | repStringOfToken (T_COMMENT s)= s
+    | repStringOfToken T_TRUE = "True"
+    | repStringOfToken T_FALSE = "False"
+    | repStringOfToken T_IF  = "if"
+    | repStringOfToken T_THEN  = "then"
+    | repStringOfToken T_ELSE  = "else"
+    | repStringOfToken T_EQUAL = "=="
+    | repStringOfToken T_LPAREN = "("
+    | repStringOfToken T_RPAREN = ")"
+    | repStringOfToken T_LBRACKET = "["
+    | repStringOfToken T_RBRACKET = "]"
+    | repStringOfToken T_NOT ="not"
+    | repStringOfToken T_PLUS = "+"
+    | repStringOfToken T_TIMES = "*"
+    | repStringOfToken T_COMMA = ","
+    | repStringOfToken T_SEMICOLON = ""
+    | repStringOfToken T_WHILE = "while"
+    | repStringOfToken T_LBRACE = "{"
+    | repStringOfToken T_RBRACE = "}"
+    | repStringOfToken T_VAR = "var"
+    | repStringOfToken T_FOR = "for"
+    | repStringOfToken T_ASSIGN = "="
+    | repStringOfToken T_CLASS = "class"
+    | repStringOfToken T_CONTINUE = "continue"
+    | repStringOfToken T_INSOF = "type"
+    | repStringOfToken T_NEW = ""
+    | repStringOfToken T_RETURN = "return"
+    | repStringOfToken T_SUPER = "super"
+    | repStringOfToken T_THIS = "self"
+    | repStringOfToken T_NULL = "None"
+    | repStringOfToken T_DOT = "."
+    | repStringOfToken (T_SINFIX s) =s
+    | repStringOfToken (T_EINFIX s) =s
+    | repStringOfToken (T_FUNCSCOPE s) =""
+    | repStringOfToken T_STATIC = ""
+    | repStringOfToken T_INDENT ="\t"
+    | repStringOfToken T_DPLUS = "++"
+    | repStringOfToken T_DMINUS ="--"
+    | repStringOfToken _=""
+
                    
   fun whitespace _ = NONE
                      
@@ -228,7 +273,7 @@ structure Parser =  struct
                  ("\\|\\|",                  produceOr),
             		 (",",                    produceComma),
             		 (";",                produceSemiColon),
-                 ("[a-zA-Z][\\[\\]a-zA-Z0-9\\.]*", produceSymbol),
+                 ("[a-zA-Z][a-zA-Z0-9\\.]*", produceSymbol),
                  ("~?[0-9]+",             produceSymbol),
                  ("\\(",                  produceLParen),
                  ("\\)",                  produceRParen),
@@ -247,9 +292,6 @@ structure Parser =  struct
 
   fun expect_INT ((T_INT i)::ts) = SOME (i,ts)
     | expect_INT _ = NONE
-
-  fun expect_SYM ((T_SYM s)::ts) = SOME (s,ts)
-    | expect_SYM _ = NONE
 
   fun expect_SINFIX ((T_SINFIX s)::ts) = SOME (s,ts)
     | expect_SINFIX _ = NONE     
@@ -284,6 +326,9 @@ structure Parser =  struct
                
   fun lexString str = lex (explode str)
 
+  fun repStringOfTokens [] = ""
+    | repStringOfTokens (x::xs) = (repStringOfToken x)^(repStringOfTokens xs)
+
   fun printToken token= (print (stringOfToken token); print "\n")
 
   fun printTokens [] = ()
@@ -295,21 +340,24 @@ structure Parser =  struct
     of NONE => choose ps ts
      | s => s)
 
-(*find the array*)
-(*takes a string and a token list*)
-(*Returns the string with [] appended to it for each array it finds*)
-(*If there's an unmatched LBRACKET< it fails.*)
-(*
-fun find_array s ts = 
-	(case expect T_LBRACKET ts
-		of NONE => SOME (s,ts)
-		 | SOME ts =>
-		 (case expect T_RBRACKET ts
-		 	of NONE => NONE
-		 	 | SOME ts => find_array (s^"[]") ts))
-*)
+  (*Utility function that pulls out the tokens that are different between two token lists*)
+  (*First argument is the longer one*)
+  (*third argument is the list built up internally*)
+  fun diff_token (t1::ts1) ts2 ret =
+    if (ts1 = ts2) then (t1::ret) else (diff_token ts1 ts2 (t1::ret))
+    | diff_token [] [] ret = ret
+    | diff_token _ _ _ = parseError "unexpected tokens"
 
-  fun parse_limExpr ts=let 
+  (*incorporate parse_sym_array because almost any symbol could have []
+    (and the ones without will be caught by Java)*)
+  (*needs to be down here because it's dependent on parses....*)
+  fun expect_SYM ((T_SYM s)::ts) = 
+      (case parse_sym_array ts s
+        of NONE => SOME (s,ts)
+         | SOME (s,ts) => (SOME (s,ts)))
+    | expect_SYM _ = NONE
+
+  and parse_limExpr ts=let 
 
     fun parse_neg ts=
       (case expect_EINFIX ts
@@ -344,7 +392,7 @@ fun find_array s ts =
     fun parse_evar ts=
       (case expect_SYM ts
         of NONE=>NONE
-        | SOME (s,ts)=>(SOME (I.Var(s),ts)))
+        | SOME (s,ts)=> SOME (I.Var(s),ts))
 
     fun parse_ecall ts=
       (case expect_SYM ts
@@ -467,7 +515,14 @@ fun find_array s ts =
     fun parse_comment ts=
       (case expect_COMMENT ts
         of NONE=>NONE
-        | SOME (text,ts)=>SOME (I.Comment(text),ts))
+        | SOME (text,ts)=>
+          (case ts of
+            [] => SOME (I.Comment(text,I.Block([])),ts)
+            | _ =>
+            (let val SOME (stmt, ts) = (parse_stmt ts)
+            in 
+              SOME (I.Comment(text,stmt),ts)
+            end)))
 
 (*Parse infix operators that usually don't return a value and DO require a semicolon*)
     fun parse_Sinfix ts=
@@ -662,6 +717,27 @@ fun find_array s ts =
   in 
     choose [parse_postfix,parse_for3,parse_if,parse_scall,parse_meth_def,parse_return,parse_while,parse_assign,parse_block,parse_Sinfix,parse_class_def,parse_initial,parse_comment,parse_cheat_expr] ts
   end
+
+  (*array initialization/access*)
+  (*Not really an expression or a statement - is essentially part of the symbol*)
+  (*That's why it takes a string - that's the symbol*)
+  (*However, has rules that need to be accounted for*)
+  (*Returns the symbol with the array stuff appended and remaining tokens*)
+  (*Probably not best approach, but should be workable*)
+  and parse_sym_array ts st = 
+    (case expect T_LBRACKET ts
+      of NONE => NONE
+       | SOME ts1 =>
+       (case parse_expr ts1
+          of NONE =>
+            (*test for empty array*)
+             (case expect T_RBRACKET ts
+                of NONE => NONE
+                | SOME ts => SOME ((st^"[]"),ts))
+           | SOME (e,ts) => 
+            (case expect T_RBRACKET ts
+              of NONE => NONE
+               | SOME ts2 => (SOME ((st^"["^(repStringOfTokens (diff_token ts1 ts2 []))^"]"),ts2)))))
     
   and parse_scope ts=
     (case expect_SCOPE ts 

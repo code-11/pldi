@@ -68,6 +68,12 @@ structure Run =struct
 	fun nestInfix ()=
 		"if (n==null && n==null){c=3;}"	
 
+	fun testArrayMath() =
+		"{int b = a[1+1];}"
+
+	fun testCommentStuff() =
+		"/*blah*/ int a = 5;"
+
 	fun genLine ()=
 		print "\n---------------------------------------------------\n"
 
@@ -94,12 +100,14 @@ structure Run =struct
 		run testNest;
 		run testIfs;
 		run nestInfix;
+		run testArrayMath;
+		run testCommentStuff;
 		genLine())
 	and run test = 
 		let val tokenList= P.lexString(test()) in
 			((P.printTokens tokenList);
 			print (case (P.parse_stmt tokenList)
-				of NONE=>"\n!"
+				of NONE=>"\n!\n"
 				| SOME (stmt,ts)=> (I.strSt stmt)^"\n\n"))
 			(*print (I.strSt (I.Block([I.Infix(I.Var("true"),"||",I.Var("false")),I.SmInitial(I.Default,"int","a")]))))*)
 		end
@@ -112,9 +120,26 @@ structure Run =struct
 			print ("\n"^(T.translate 0 stmt)^"\n\n")
 		end
 
+	(*Test that the file prints right*)
 	fun testInput(file)=
 		print(TextIO.inputAll(TextIO.openIn(file)))
 
+	(*Print token stream from file*)
+	fun tokenizeInput(file)=
+		let val tokenList =P.lexString(TextIO.inputAll(TextIO.openIn(file)))
+		in
+			P.printTokens tokenList
+		end
+
+	(*Print parser output of file*)
+	fun parseInput(file)=
+		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(TextIO.inputAll(TextIO.openIn(file)))))
+		in
+			((P.printTokens ts);
+				print (I.strSt stmt))
+		end
+
+	(*write file translation to a file*)
 	fun transInput(fileIn,fileOut)=
 		(*Put text content of input file through parser*)
 		let val SOME (stmt, ts) = (P.parse_stmt(P.lexString(TextIO.inputAll(TextIO.openIn(fileIn)))))

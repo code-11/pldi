@@ -37,7 +37,7 @@ structure InternalRepresentation = struct
 			(*stmt=return value*)
 			| Return of expr
 			| Block of stmt list
-			| Comment of string
+			| Comment of string*stmt
 			(*stmt1=val1,str=operator,stmt=val2 *)
 			| SInfix of expr*string*stmt		(*a single variable*)
 			| For3 of stmt*expr*stmt*stmt
@@ -65,7 +65,7 @@ structure InternalRepresentation = struct
 		| 	strSt (While(v,block)) = $["While (",strExpr v,",",strSt block,")"]
 		|	strSt (Return(v)) = $["Return (",strExpr v,")"]
 		|	strSt (Block(stmts)) = $["Block [",$+ (map strSt stmts),"]"]
-		|	strSt (Comment(stuff)) = $["Comment (",stuff,")"]
+		|	strSt (Comment(stuff,stmt)) = $["Comment (",stuff,")",(strSt stmt)]
 		|	strSt (SInfix(val1,operator,val2)) = $["SInfix(",strExpr val1,",",operator,",",strSt val2,")"]
 		| 	strSt (For3(init,check,stmt,rest))= $["For3(",strSt init,",",strExpr check,",",strSt stmt,",",strSt rest,")"]
 		| 	strSt (CheatExpr(expr))= $["CHExpr("^strExpr expr^")"]
