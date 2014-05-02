@@ -344,7 +344,7 @@ structure Parser =  struct
   (*First argument is the longer one*)
   (*third argument is the list built up internally*)
   fun diff_token (t1::ts1) ts2 ret =
-    if (ts1 = ts2) then (t1::ret) else (diff_token ts1 ts2 (t1::ret))
+    if (ts1 = ts2) then (ret@[t1]) else (diff_token ts1 ts2 (t1::ret))
     | diff_token [] [] ret = ret
     | diff_token _ _ _ = parseError "unexpected tokens"
 
@@ -519,10 +519,13 @@ structure Parser =  struct
           (case ts of
             [] => SOME (I.Comment(text,I.Block([])),ts)
             | _ =>
-            (let val SOME (stmt, ts) = (parse_stmt ts)
-            in 
-              SOME (I.Comment(text,stmt),ts)
-            end)))
+              (case parse_stmt ts
+                of NONE => NONE
+                 | SOME (_, _) =>
+                    (let val SOME (stmt, ts) = (parse_stmt ts)
+                    in 
+                      SOME (I.Comment(text,stmt),ts)
+                    end))))
 
 (*Parse infix operators that usually don't return a value and DO require a semicolon*)
     fun parse_Sinfix ts=
@@ -731,13 +734,13 @@ structure Parser =  struct
        (case parse_expr ts1
           of NONE =>
             (*test for empty array*)
-             (case expect T_RBRACKET ts
+             (case expect T_RBRACKET ts1
                 of NONE => NONE
                 | SOME ts => SOME ((st^"[]"),ts))
            | SOME (e,ts) => 
             (case expect T_RBRACKET ts
               of NONE => NONE
-               | SOME ts2 => (SOME ((st^"["^(repStringOfTokens (diff_token ts1 ts2 []))^"]"),ts2)))))
+               | SOME ts2 => (SOME ((st^"["^(repStringOfTokens (diff_token ts1 ts2 []))),ts2)))))
     
   and parse_scope ts=
     (case expect_SCOPE ts 

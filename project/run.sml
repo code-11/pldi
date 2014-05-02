@@ -41,7 +41,7 @@ structure Run =struct
 		"public static int[] spam(int[] a){a=1;} "
 
 	fun testArrayLit ()=
-		"{int[] c = {}; int[] d = {1}; int[] e = {1,2}; int d[]={1,2,3};}"
+		"{int[] c = {};}"(* int[] d = {1}; int[] e = {1,2}; int d[]={1,2,3};}"*)
 
 	fun testArrayCons ()=
 		"{int[] c=new int[4]; int c[]=new int[5];}"
@@ -60,8 +60,7 @@ structure Run =struct
 
 	fun testNest ()=
 		"return node.getValue();"
-		(*"if(node.getValue()){i++;}"
-*)
+
 	fun testIfs ()=
 		"public static void main(){"^testUnary()^"}"
 
